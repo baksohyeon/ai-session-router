@@ -1,0 +1,4 @@
+{
+  "$comment": "OPTIONAL placeholder for CLAUDE CODE MCP config (JSON). Not auto-applied or symlinked. Merge entries into a per-account config root deliberately. Tokens/auth stay under each config root, never here.",
+  "mcpServers": {}
+}

@@ -1,0 +1,378 @@
+#!/usr/bin/env zsh
+# ai — AI session router (generic / cross-platform)
+#
+# Launches Claude Code / Codex with a deliberate combination of:
+#   workspace -> files + logs            (cd into it; logs under <ws>/.ai-logs/)
+#   account   -> AI auth/billing/session (CLAUDE_CONFIG_DIR / CODEX_HOME)
+#   browser   -> GUI chat identity       (per-OS browser launch)
+#   Tailscale -> remote entry only       (reported, never configured here)
+#
+# Configuration is read from ~/.config/ai-session-router/router.env if present,
+# otherwise sensible defaults are used. See docs/PORTABILITY.md.
+#
+# Dependency: zsh (uses arrays, setopt, ${x:t}). Tested on macOS; Linux paths
+# are provided but only smoke-tested. See docs/PORTABILITY.md for the support matrix.
+
+emulate -L zsh
+set -u
+
+# ---------- platform detection ----------
+case "$(uname -s)" in
+  Darwin) AI_OS=macos ;;
+  Linux)  AI_OS=linux ;;
+  *)      AI_OS=other ;;
+esac
+
+# ---------- user-overridable config ----------
+# Defaults can be overridden via env or ~/.config/ai-session-router/router.env
+: "${AI_PERSONAL_WS:=$HOME/dev/personal}"
+: "${AI_COMPANY_WS:=$HOME/dev/work}"
+: "${AI_CLAUDE_ROOT_PREFIX:=$HOME/.claude-}"   # + <account>
+: "${AI_CODEX_ROOT_PREFIX:=$HOME/.codex-}"     # + <account>
+: "${AI_CHROME_COMPANY_PROFILE:=Work}"
+: "${AI_COMPANY_CHATGPT_URL:=https://chatgpt.com/}"
+: "${AI_COMPANY_CLAUDE_URL:=https://claude.ai/}"
+: "${AI_SHARED:=$HOME/.ai-shared}"
+
+_cfg="${XDG_CONFIG_HOME:-$HOME/.config}/ai-session-router/router.env"
+[[ -f "$_cfg" ]] && source "$_cfg"
+
+# ---------- maps ----------
+ws_path() {
+  case "$1" in
+    personal) print -r -- "$AI_PERSONAL_WS" ;;
+    company)  print -r -- "$AI_COMPANY_WS" ;;
+    *) return 1 ;;
+  esac
+}
+
+cfg_root() {  # $1 tool, $2 account
+  case "$1" in
+    claude) print -r -- "${AI_CLAUDE_ROOT_PREFIX}$2" ;;
+    codex)  print -r -- "${AI_CODEX_ROOT_PREFIX}$2" ;;
+    *) return 1 ;;
+  esac
+}
+
+cfg_env_name() {
+  case "$1" in
+    claude) print -r -- "CLAUDE_CONFIG_DIR" ;;
+    codex)  print -r -- "CODEX_HOME" ;;
+  esac
+}
+
+log_dir() {  # $1 workspace, $2 tool, $3 account
+  print -r -- "$(ws_path "$1")/.ai-logs/$2/$3-account"
+}
+
+# ---------- platform helpers ----------
+_open_url() {  # open one or more URLs in the default browser
+  case "$AI_OS" in
+    macos) open "$@" ;;
+    linux) command -v xdg-open >/dev/null 2>&1 && { local u; for u in "$@"; do xdg-open "$u" >/dev/null 2>&1; done; } || warn "no xdg-open; cannot open: $*" ;;
+    *) warn "unsupported OS for opening URLs: $*" ;;
+  esac
+}
+
+_has_browser() {  # $1 = edge|chrome
+  case "$AI_OS" in
+    macos)
+      case "$1" in
+        edge)   [[ -d "/Applications/Microsoft Edge.app" ]] ;;
+        chrome) [[ -d "/Applications/Google Chrome.app" ]] ;;
+      esac ;;
+    linux)
+      case "$1" in
+        edge)   command -v microsoft-edge >/dev/null 2>&1 || command -v microsoft-edge-stable >/dev/null 2>&1 ;;
+        chrome) command -v google-chrome  >/dev/null 2>&1 || command -v google-chrome-stable  >/dev/null 2>&1 || command -v chromium >/dev/null 2>&1 ;;
+      esac ;;
+    *) return 1 ;;
+  esac
+}
+
+_launch_edge() {  # personal browser identity (no forced URL)
+  case "$AI_OS" in
+    macos) open -a "Microsoft Edge" ;;
+    linux) (microsoft-edge >/dev/null 2>&1 &) 2>/dev/null || (microsoft-edge-stable >/dev/null 2>&1 &) ;;
+    *) return 1 ;;
+  esac
+}
+
+_launch_chrome_profile() {  # $1 profile, rest = URLs (company identity)
+  local profile="$1"; shift
+  case "$AI_OS" in
+    macos) open -na "Google Chrome" --args --profile-directory="$profile" "$@" ;;
+    linux)
+      local bin
+      for bin in google-chrome google-chrome-stable chromium; do
+        command -v "$bin" >/dev/null 2>&1 && { ("$bin" --profile-directory="$profile" "$@" >/dev/null 2>&1 &); return 0; }
+      done
+      return 1 ;;
+    *) return 1 ;;
+  esac
+}
+
+_os_label() {
+  case "$AI_OS" in
+    macos) print -r -- "macOS $(sw_vers -productVersion 2>/dev/null) ($(uname -m))" ;;
+    linux)
+      if [[ -r /etc/os-release ]]; then
+        local n; n="$(. /etc/os-release 2>/dev/null; print -r -- "$PRETTY_NAME")"
+        print -r -- "${n:-Linux} ($(uname -m))"
+      else print -r -- "Linux ($(uname -m))"; fi ;;
+    *) print -r -- "$(uname -s) ($(uname -m))" ;;
+  esac
+}
+
+_sshd_listening() {  # echoes a human string
+  if command -v lsof >/dev/null 2>&1 && lsof -nP -iTCP:22 -sTCP:LISTEN >/dev/null 2>&1; then
+    print -r -- "yes (listener detected on tcp/22)"
+  elif command -v ss >/dev/null 2>&1 && ss -ltn 2>/dev/null | grep -qE '[:.]22 '; then
+    print -r -- "yes (ss: listener on tcp/22)"
+  else
+    print -r -- "not detected (may require privileges / remote login off)"
+  fi
+}
+
+_run_with_transcript() {  # <transcript> <cmd> [args...] — preserve TTY via script(1)
+  local transcript="$1"; shift
+  if command -v script >/dev/null 2>&1; then
+    case "$AI_OS" in
+      macos) script -q "$transcript" "$@" ;;                # BSD: script [-q] file cmd...
+      linux) script -q -c "${(j: :)${(@q)@}}" "$transcript" ;; # util-linux: script -c "cmd" file
+      *)     "$@" ;;
+    esac
+  else
+    "$@"
+  fi
+}
+
+# ---------- warnings (non-blocking) ----------
+warn() { print -r -- "⚠️  $*" >&2; }
+
+valid_ws()      { [[ "$1" == personal || "$1" == company ]]; }
+valid_account() { [[ "$1" == personal || "$1" == company ]]; }
+
+check_mismatch() {  # workspace account
+  [[ "$1" == personal && "$2" == company ]] && \
+    warn "personal workspace paired with COMPANY account ($1 ws + $2 acct)."
+  return 0
+}
+
+check_cwd() {  # workspace path
+  case "$PWD/" in
+    "$1/"*) ;;
+    *) warn "current dir is outside selected workspace:
+      cwd: $PWD
+      ws:  $1" ;;
+  esac
+}
+
+check_secrets() {  # workspace path — names only, contents NEVER read
+  setopt local_options null_glob
+  local f
+  for f in "$1"/.env "$1"/.env.* "$1"/*.pem "$1"/*.key "$1"/*.p12 \
+           "$1"/id_rsa "$1"/id_dsa "$1"/id_ecdsa "$1"/id_ed25519 \
+           "$1"/*secret* "$1"/*credential*; do
+    [[ -e "$f" ]] && warn "secret-looking file near workspace root: ${f:t} (contents not read)"
+  done
+  return 0
+}
+
+# ---------- commands ----------
+cmd_resolve() {  # <tool> <workspace> [--account X]
+  local tool="${1:-}" ws="${2:-}"
+  [[ -n "$tool" && -n "$ws" ]] || { print -r -- "usage: ai resolve <claude|codex> <personal|company> [--account personal|company]" >&2; return 2; }
+  shift 2
+  valid_ws "$ws" || { print -r -- "invalid workspace: $ws" >&2; return 2; }
+  local account="$ws"
+  while (( $# )); do
+    case "$1" in
+      --account) account="${2:-}"; shift 2 ;;
+      *) shift ;;
+    esac
+  done
+  valid_account "$account" || { print -r -- "invalid account: $account" >&2; return 2; }
+  print -r -- "tool:       $tool"
+  print -r -- "workspace:  $ws -> $(ws_path "$ws")"
+  print -r -- "account:    $account"
+  print -r -- "$(cfg_env_name "$tool")=$(cfg_root "$tool" "$account")"
+  print -r -- "logs:       $(log_dir "$ws" "$tool" "$account")"
+  check_mismatch "$ws" "$account"
+}
+
+run_tool() {  # <tool> <workspace> [--account X] [-- passthrough...]
+  local tool="${1:-}" ws="${2:-}"
+  [[ -n "$tool" && -n "$ws" ]] || { print -r -- "usage: ai $tool <personal|company> [--account personal|company] [-- args...]" >&2; return 2; }
+  shift 2
+  valid_ws "$ws" || { print -r -- "invalid workspace: $ws" >&2; return 2; }
+  local account="$ws"; local -a passthru=()
+  while (( $# )); do
+    case "$1" in
+      --account) account="${2:-}"; shift 2 ;;
+      --) shift; passthru+=("$@"); break ;;
+      *) passthru+=("$1"); shift ;;
+    esac
+  done
+  valid_account "$account" || { print -r -- "invalid account: $account" >&2; return 2; }
+  command -v "$tool" >/dev/null 2>&1 || { print -r -- "$tool not found on PATH" >&2; return 127; }
+
+  local wp cr ld
+  wp="$(ws_path "$ws")"; cr="$(cfg_root "$tool" "$account")"; ld="$(log_dir "$ws" "$tool" "$account")"
+  mkdir -p "$ld" "$wp"
+  check_mismatch "$ws" "$account"
+  check_cwd "$wp"
+  check_secrets "$wp"
+  cd "$wp" || { print -r -- "cannot cd to $wp" >&2; return 1; }
+
+  local ts transcript; ts="$(date +%Y%m%d-%H%M%S)"; transcript="$ld/session-$ts.log"
+  case "$tool" in
+    claude)
+      export CLAUDE_CONFIG_DIR="$cr"
+      print -r -- "→ claude  CLAUDE_CONFIG_DIR=$cr  cwd=$wp"
+      print -r -- "  transcript: $transcript"
+      _run_with_transcript "$transcript" claude "${passthru[@]}" ;;
+    codex)
+      export CODEX_HOME="$cr"
+      print -r -- "→ codex   CODEX_HOME=$cr  cwd=$wp"
+      print -r -- "  transcript: $transcript"
+      print -r -- "  note: Codex internal logs may remain under \$CODEX_HOME/log (follows account, not workspace)."
+      _run_with_transcript "$transcript" codex "${passthru[@]}" ;;
+    *) print -r -- "unknown tool: $tool" >&2; return 2 ;;
+  esac
+}
+
+cmd_gui() {  # personal|company
+  case "${1:-}" in
+    personal)
+      if _has_browser edge; then print -r -- "→ gui personal: Microsoft Edge"; _launch_edge
+      else warn "Microsoft Edge not found; opening default browser."; _open_url "$AI_COMPANY_CLAUDE_URL"; fi ;;
+    company)
+      if _has_browser chrome; then
+        print -r -- "→ gui company: Chrome profile \"$AI_CHROME_COMPANY_PROFILE\" + company chat URLs"
+        _launch_chrome_profile "$AI_CHROME_COMPANY_PROFILE" "$AI_COMPANY_CHATGPT_URL" "$AI_COMPANY_CLAUDE_URL" \
+          || { warn "could not launch Chrome with a dedicated profile."; return 1; }
+      else warn "Google Chrome not found; cannot open dedicated company profile."; return 1; fi ;;
+    *) print -r -- "usage: ai gui <personal|company>" >&2; return 2 ;;
+  esac
+}
+
+cmd_shell() {  # personal|company
+  local ws="${1:-}"
+  valid_ws "$ws" || { print -r -- "usage: ai shell <personal|company>" >&2; return 2; }
+  local wp; wp="$(ws_path "$ws")"; mkdir -p "$wp"
+  check_cwd "$wp"; check_secrets "$wp"
+  cd "$wp" || return 1
+  print -r -- "→ shell in $ws workspace: $wp"
+  exec "${SHELL:-/bin/zsh}"
+}
+
+cmd_tmux() {  # personal|company
+  local ws="${1:-}"
+  valid_ws "$ws" || { print -r -- "usage: ai tmux <personal|company>" >&2; return 2; }
+  command -v tmux >/dev/null 2>&1 || { print -r -- "tmux not found" >&2; return 1; }
+  local wp sess; wp="$(ws_path "$ws")"; sess="ai-$ws"; mkdir -p "$wp"
+  if tmux has-session -t "$sess" 2>/dev/null; then print -r -- "attaching tmux session: $sess"
+  else print -r -- "creating tmux session: $sess (cwd $wp)"; tmux new-session -d -s "$sess" -c "$wp"; fi
+  if [[ -n "${TMUX:-}" ]]; then tmux switch-client -t "$sess"; else tmux attach-session -t "$sess"; fi
+}
+
+cmd_doctor() {
+  print -r -- "== ai doctor =="
+  print -r -- "OS:      $(_os_label)"
+  print -r -- "shell:   ${SHELL:-?}"
+  print -r -- "whoami:  $(whoami)"
+  print -r -- "HOME:    $HOME"
+  case ":$PATH:" in
+    *":$HOME/.local/bin:"*) print -r -- "PATH:    ~/.local/bin present" ;;
+    *) print -r -- "PATH:    ~/.local/bin MISSING" ;;
+  esac
+  print -r -- ""
+  print -r -- "tools:"
+  local t p
+  for t in claude codex tmux tailscale; do p="$(command -v "$t" 2>/dev/null)"; print -r -- "  $t: ${p:-NOT FOUND}"; done
+  _has_browser edge   && print -r -- "  Microsoft Edge: present" || print -r -- "  Microsoft Edge: NOT FOUND"
+  _has_browser chrome && print -r -- "  Google Chrome: present"  || print -r -- "  Google Chrome: NOT FOUND"
+  print -r -- ""
+  print -r -- "workspaces:"
+  print -r -- "  personal: $(ws_path personal)"
+  print -r -- "  company:  $(ws_path company)"
+  print -r -- "config roots:"
+  local a r
+  for a in personal company; do
+    for t in claude codex; do
+      r="$(cfg_root "$t" "$a")"
+      [[ -d "$r" ]] && print -r -- "  $t/$a: $r (exists)" || print -r -- "  $t/$a: $r (missing)"
+    done
+  done
+  print -r -- "log resolution (examples):"
+  print -r -- "  company/claude/personal -> $(log_dir company claude personal)"
+  print -r -- "config: ${_cfg} $([[ -f "$_cfg" ]] && print -- '(loaded)' || print -- '(defaults)')"
+  [[ -x "$HOME/.local/bin/ai" ]] && print -r -- "  ~/.local/bin/ai: present (executable)" || print -r -- "  ~/.local/bin/ai: MISSING"
+  command -v ai >/dev/null 2>&1 && print -r -- "  ai on PATH: yes ($(command -v ai))" || print -r -- "  ai on PATH: no"
+}
+
+cmd_remote_doctor() {
+  print -r -- "== ai remote doctor =="
+  print -r -- "hostname: $(hostname)"
+  print -r -- "whoami:   $(whoami)"
+  local tp; tp="$(command -v tailscale 2>/dev/null)"
+  print -r -- "tailscale: ${tp:-NOT FOUND}"
+  if [[ -n "$tp" ]]; then
+    print -r -- "-- tailscale status (summary) --"; tailscale status 2>/dev/null | head -n 10 || print -r -- "  (status unavailable)"
+    print -r -- "-- tailscale ip --"; tailscale ip 2>/dev/null || print -r -- "  (ip unavailable)"
+  fi
+  print -r -- "-- sshd listening on :22? --"; print -r -- "  $(_sshd_listening)"
+  print -r -- "-- tmux sessions --"; tmux ls 2>/dev/null || print -r -- "  (none)"
+}
+
+cmd_logs() {
+  print -r -- "== ai logs =="
+  local ws base files
+  for ws in personal company; do
+    base="$(ws_path "$ws")/.ai-logs"
+    print -r -- "[$ws] $base"
+    if [[ -d "$base" ]]; then
+      files="$(find "$base" -type f 2>/dev/null | sort)"
+      [[ -n "$files" ]] && print -r -- "$files" | sed 's/^/  /' || print -r -- "  (empty)"
+    else print -r -- "  (not created yet)"; fi
+  done
+}
+
+usage() {
+  cat <<'EOF'
+ai — AI session router
+
+  ai gui     <personal|company>
+  ai shell   <personal|company>
+  ai claude  <personal|company> [--account personal|company] [-- args...]
+  ai codex   <personal|company> [--account personal|company] [-- args...]
+  ai tmux    <personal|company>
+  ai doctor
+  ai remote doctor
+  ai logs
+  ai resolve <claude|codex> <personal|company> [--account personal|company]
+
+Defaults: account follows workspace. Override with --account.
+Config: ${XDG_CONFIG_HOME:-~/.config}/ai-session-router/router.env
+EOF
+}
+
+main() {
+  local cmd="${1:-}"; (( $# )) && shift
+  case "$cmd" in
+    gui)     cmd_gui "$@" ;;
+    shell)   cmd_shell "$@" ;;
+    claude)  run_tool claude "$@" ;;
+    codex)   run_tool codex "$@" ;;
+    tmux)    cmd_tmux "$@" ;;
+    doctor)  cmd_doctor ;;
+    remote)  [[ "${1:-}" == doctor ]] && cmd_remote_doctor || { print -r -- "usage: ai remote doctor" >&2; return 2; } ;;
+    logs)    cmd_logs ;;
+    resolve) cmd_resolve "$@" ;;
+    ""|help|-h|--help) usage ;;
+    *) print -r -- "unknown command: $cmd" >&2; usage; return 1 ;;
+  esac
+}
+
+main "$@"

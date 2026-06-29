@@ -1,0 +1,91 @@
+# Architecture
+
+## 1. Problem
+
+One machine, one user, two AI identities (personal accounts/projects vs work
+accounts/repos). CLI AI tools default to a single global state dir, which causes
+cross-contamination: wrong billing, mixed chat history, wrong MCP tokens, logs in the
+wrong tree. `ai` makes the identity choice explicit and repeatable.
+
+## 2. Core idea — orthogonal axes
+
+A "session" is decomposed into independent axes that combine freely:
+
+| Axis          | Decides                       | Mechanism                                   |
+|---------------|-------------------------------|---------------------------------------------|
+| **workspace** | files + log location          | `cd`; logs under `<ws>/.ai-logs/`           |
+| **account**   | auth / billing / session      | `CLAUDE_CONFIG_DIR` · `CODEX_HOME`          |
+| **browser**   | GUI chat identity             | per-OS browser launch                       |
+| **Tailscale** | remote entry (report only)    | `ai remote doctor`                          |
+
+Changing one axis never affects the others. `ai codex company --account personal` =
+"personal account, company workspace, company-located logs" — one line here, a footgun
+elsewhere.
+
+## 3. The mechanism
+
+CLI AI tools resolve all state from one root dir via an env var. So the heart of the
+router is three lines:
+
+```zsh
+export CODEX_HOME="$HOME/.codex-$account"   # account = which folder
+cd "$workspace"                              # workspace = where you work
+codex "$@"                                    # everything else inherits both
+```
+
+Everything else (arg parsing, default rules, warnings, logging, gui/tmux/doctor) is
+ergonomics and guardrails.
+
+### Config roots
+
+| Tool   | personal              | company              | env var             |
+|--------|-----------------------|----------------------|---------------------|
+| Claude | `~/.claude-personal`  | `~/.claude-company`  | `CLAUDE_CONFIG_DIR` |
+| Codex  | `~/.codex-personal`   | `~/.codex-company`   | `CODEX_HOME`        |
+
+(Prefixes are configurable via `router.env`.) Originals `~/.claude`/`~/.codex` are
+never moved; seed new roots by cloning or by a fresh login.
+
+### Workspaces & logs
+
+`<workspace>/.ai-logs/<tool>/<account>-account/session-<timestamp>.log`.
+**Workspace owns logs; account owns auth.** A terminal transcript is captured via
+`script(1)` (TTY-preserving, so the interactive TUI still works).
+
+## 4. Guardrails
+
+- personal workspace + company account → warn
+- cwd outside the selected workspace → warn
+- secret-looking filenames near workspace root → warn **by name only** (never reads
+  contents)
+- nothing hard-blocks unless an action would overwrite/destroy
+
+## 5. Known limitations
+
+- **Codex internal logs** can't be redirected by CLI flag; they live under
+  `$CODEX_HOME/log/` (follow the account). The workspace transcript compensates.
+- **Claude** has no general log-dir flag (only `--debug-file`). Same compensation.
+- **Version drift**: tools auto-update; the wrapper hardcodes no versions.
+
+## 6. MCP — deliberately out of scope (v1)
+
+Claude (JSON) and Codex (TOML) use different MCP config formats, and per-account tokens
+must live in each config root anyway. So MCP is **not** a core feature. The
+`share/mcp/` placeholders exist only as an optional, documented extension point. Wire
+MCP into each account's own config root manually.
+
+## 7. Data flow
+
+```
+$ ai codex company --account personal -- doctor
+        │        │              │          └── passthrough → `codex doctor`
+        │        │              └── account override → CODEX_HOME=~/.codex-personal
+        │        └── workspace → cd ~/dev/work ; logs under ~/dev/work/.ai-logs
+        └── tool → codex
+   ↓
+   warnings (mismatch / cwd / secrets) → stderr
+   ↓
+   export CODEX_HOME ; cd workspace ; script -q <transcript> codex doctor
+```
+
+See also [PORTABILITY.md](PORTABILITY.md) and [COMMANDS.md](COMMANDS.md).

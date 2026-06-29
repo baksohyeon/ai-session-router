@@ -1,0 +1,7 @@
+# OPTIONAL placeholder for CODEX MCP config (TOML). Not auto-applied or symlinked.
+# Merge entries into a per-account config root deliberately. Codex and Claude do NOT
+# share an MCP format. Tokens/auth stay under each config root, never here.
+
+# [mcp_servers.example]
+# command = "npx"
+# args = ["-y", "@example/mcp-server"]

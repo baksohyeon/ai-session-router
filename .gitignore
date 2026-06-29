@@ -1,0 +1,18 @@
+# Never track account config roots — they contain auth.json / tokens
+.claude-*/
+.codex-*/
+
+# Never track session logs / transcripts
+.ai-logs/
+*.log
+
+# Backups
+*.bak
+*.bak.*
+
+# Local config (machine-specific; ships as examples/router.env.example instead)
+router.env
+
+# OS cruft
+.DS_Store
+Thumbs.db
