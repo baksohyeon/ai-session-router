@@ -75,6 +75,14 @@ zsh required. macOS is fully tested. Linux paths (xdg-open, util-linux `script`,
 `ss`-based checks) are provided and smoke-tested. See
 [docs/PORTABILITY.md](docs/PORTABILITY.md) for the support matrix.
 
+## Remote access
+
+Running `ai` on one machine and attaching from your phone, another laptop, or anywhere
+else — without losing the session when the network drops or the lid closes — is
+covered in [docs/REMOTE-ACCESS.md](docs/REMOTE-ACCESS.md)
+([한국어](docs/REMOTE-ACCESS-ko.md)). Network fundamentals through Tailscale, SSH,
+tmux, sleep control, mobile clients, and end-to-end workflows.
+
 ## Security
 
 This repo ships **no secrets**. Account config roots (`~/.claude-*`, `~/.codex-*`) and
