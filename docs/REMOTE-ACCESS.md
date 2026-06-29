@@ -10,6 +10,18 @@ This document is intentionally **concept-first**. Every section explains *why* b
 *how*, because the reason most "just type this" guides break in real life is that the
 reader doesn't know what failure mode they're hitting.
 
+### Conventions
+
+- `$USER` in shell commands — expands automatically to your username at runtime, so
+  examples are copy-paste-safe.
+- `<your-username>`, `<your-host>` etc. in config files (SSH config, ACL JSON) — manual
+  placeholders. Replace before saving; these contexts don't do shell expansion.
+- `home-mac`, `home-server`, `work-laptop` — generic hostname placeholders. Use
+  whatever names you set with `tailscale set --hostname`.
+- `~/dev/personal`, `~/dev/work` — the router's default workspaces from
+  [`install.sh`](../install.sh). Override via `router.env` (see
+  [examples/router.env.example](../examples/router.env.example)).
+
 ---
 
 ## Table of contents
@@ -192,13 +204,13 @@ Stop typing long commands. Define hosts:
 ```
 Host home
     HostName home-mac
-    User cnai
+    User <your-username>
     Port 22
     ForwardAgent yes
 
 Host work-laptop
     HostName work-laptop
-    User cnai
+    User <your-username>
     ProxyJump bastion.example.com
 
 Host bastion.example.com
@@ -564,8 +576,9 @@ Once enabled (admin console → DNS → Enable MagicDNS), every node is reachabl
 sudo tailscale set --hostname home-mac
 ```
 
-Pick short, distinctive names. `dorito-company` is what your `hostname` returns
-locally — Tailscale uses the macOS computer name unless you override.
+Pick short, distinctive names. Tailscale defaults to your machine's local hostname
+(what `hostname` returns), which is usually noisy — override it explicitly so commands
+like `ssh home-mac` stay readable.
 
 ### 5.7 Subnet router — reaching LAN devices
 
@@ -613,7 +626,7 @@ other node, on any port." Tighten it with tags:
     { "action": "check",
       "src":    ["autogroup:member"],
       "dst":    ["tag:server"],
-      "users":  ["cnai", "root"] }
+      "users":  ["<your-username>", "root"] }
   ]
 }
 ```
@@ -719,7 +732,7 @@ tmux new -d -s claude
 
 ```sh
 # From phone:
-ssh cnai@home-mac
+ssh $USER@home-mac
 tmux attach -t claude
 # do work; prefix-d to detach
 exit
@@ -729,7 +742,7 @@ Connection drops on the subway tunnel? Reconnect, `tmux attach -t claude`, you'r
 back. Want it to survive *roaming* (Wi-Fi → LTE)? Add mosh:
 
 ```sh
-mosh cnai@home-mac -- tmux new -As claude
+mosh $USER@home-mac -- tmux new -As claude
 ```
 
 ### 7.2 Workflow B — work laptop → home Mac, after hours
@@ -776,7 +789,7 @@ tmux new -d -s ai 'ai claude personal'  # if you have the ai router set up
 From any device:
 
 ```sh
-ssh cnai@home-server
+ssh $USER@home-server
 tmux attach -t ai
 ```
 
@@ -786,7 +799,7 @@ performance ceiling (a Pi is fine for chat, may struggle with large agentic loop
 ### 7.5 Workflow E — flaky network on the road
 
 ```sh
-mosh cnai@home-server -- tmux new -As road
+mosh $USER@home-server -- tmux new -As road
 ```
 
 mosh handles network drops, IP changes, and suspend/resume. tmux handles process
@@ -890,7 +903,7 @@ Common causes:
 - Public key not in server's `~/.ssh/authorized_keys`.
 - Permissions on `~/.ssh` or `authorized_keys` too loose (must be `700` and `600`).
 - Server config disabled pubkey auth (check `/etc/ssh/sshd_config`).
-- Wrong user (`ssh root@host` when the key was added for `cnai`).
+- Wrong user (`ssh root@host` when the key was added for a different account).
 
 ### 9.4 "tmux session disappeared"
 

@@ -9,6 +9,17 @@
 실전에서 깨지는 이유는, 막상 에러가 났을 때 자기가 어떤 실패 모드를 마주쳤는지를
 모르기 때문입니다. 그래서 *왜* 그렇게 하는지부터 설명합니다.
 
+### 표기 규칙
+
+- 셸 명령 안의 `$USER` — 본인 사용자 이름으로 자동 확장. 예제를 그대로 복사해서
+  쓰면 됩니다.
+- 설정 파일 (SSH config, ACL JSON 등) 안의 `<your-username>`, `<your-host>` 등 —
+  수동 placeholder. 본인 값으로 바꿔서 저장하세요. 이 파일들은 셸 확장이 안 됩니다.
+- `home-mac`, `home-server`, `work-laptop` — 호스트네임 일반 placeholder.
+  `tailscale set --hostname`으로 본인이 정한 이름으로 바꾸세요.
+- `~/dev/personal`, `~/dev/work` — [`install.sh`](../install.sh)의 기본 워크스페이스.
+  `router.env`로 덮어쓰기 가능 (예시: [examples/router.env.example](../examples/router.env.example)).
+
 ---
 
 ## 목차
@@ -189,13 +200,13 @@ Host *
 ```
 Host home
     HostName home-mac
-    User cnai
+    User <your-username>
     Port 22
     ForwardAgent yes
 
 Host work-laptop
     HostName work-laptop
-    User cnai
+    User <your-username>
     ProxyJump bastion.example.com
 
 Host bastion.example.com
@@ -554,8 +565,9 @@ sudo tailscale up --ssh
 sudo tailscale set --hostname home-mac
 ```
 
-짧고 알아보기 쉬운 이름 추천. 본인 호스트네임 `dorito-company`는 로컬 `hostname`
-값임 — Tailscale은 따로 안 바꾸면 macOS 컴퓨터 이름을 씀.
+짧고 알아보기 쉬운 이름 추천. Tailscale은 따로 안 바꾸면 머신의 로컬 호스트네임
+(`hostname` 명령 결과)을 그대로 씀 — 보통 길고 안 예쁨. 명시적으로 짧게 바꿔두면
+`ssh home-mac` 같은 명령이 깔끔.
 
 ### 5.7 Subnet router — LAN 기기에 접근
 
@@ -602,7 +614,7 @@ sudo tailscale set --exit-node=<node-name> --exit-node-allow-lan-access
     { "action": "check",
       "src":    ["autogroup:member"],
       "dst":    ["tag:server"],
-      "users":  ["cnai", "root"] }
+      "users":  ["<your-username>", "root"] }
   ]
 }
 ```
@@ -703,7 +715,7 @@ tmux new -d -s claude
 
 ```sh
 # 휴대폰에서:
-ssh cnai@home-mac
+ssh $USER@home-mac
 tmux attach -t claude
 # 작업; prefix-d로 detach
 exit
@@ -713,7 +725,7 @@ exit
 ↔ LTE 로밍해도 끊기지 말았으면? mosh 추가:
 
 ```sh
-mosh cnai@home-mac -- tmux new -As claude
+mosh $USER@home-mac -- tmux new -As claude
 ```
 
 ### 7.2 시나리오 B — 회사 노트북 → 집 맥, 야근
@@ -758,7 +770,7 @@ tmux new -d -s ai 'ai claude personal'  # ai 라우터 셋업된 경우
 어디서든:
 
 ```sh
-ssh cnai@home-server
+ssh $USER@home-server
 tmux attach -t ai
 ```
 
@@ -768,7 +780,7 @@ tmux attach -t ai
 ### 7.5 시나리오 E — 길에서 불안정한 망
 
 ```sh
-mosh cnai@home-server -- tmux new -As road
+mosh $USER@home-server -- tmux new -As road
 ```
 
 mosh가 네트워크 끊김·IP 바뀜·suspend/resume 다 처리. tmux가 프로세스 영속성
@@ -869,7 +881,7 @@ ssh -vvv user@host  2>&1 | grep -E 'identity|publickey|Offering|Accepted|denied'
 - 공개키가 서버 `~/.ssh/authorized_keys`에 없음.
 - `~/.ssh`나 `authorized_keys` 권한이 너무 헐거움 (`700`, `600` 필수).
 - 서버 설정이 pubkey auth 꺼둠 (`/etc/ssh/sshd_config` 확인).
-- 사용자 잘못 (`cnai`용으로 키 등록했는데 `ssh root@host`).
+- 사용자 잘못 (다른 계정용으로 키 등록했는데 `ssh root@host`).
 
 ### 9.4 "tmux 세션이 사라짐"
 
