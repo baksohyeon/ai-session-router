@@ -40,6 +40,9 @@ AI_CODEX_ROOT_PREFIX="\$HOME/.codex-"
 AI_CHROME_COMPANY_PROFILE="Work"
 AI_COMPANY_CHATGPT_URL="https://chatgpt.com/"
 AI_COMPANY_CLAUDE_URL="https://claude.ai/"
+AI_CLAUDE_APP="/Applications/Claude.app"
+AI_CLAUDE_APP_DATA_PREFIX="\$HOME/.claude-app-"
+AI_GUI_APPS="claude"
 EOF
   echo "  wrote config: $CFG"
 fi

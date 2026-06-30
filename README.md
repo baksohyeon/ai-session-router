@@ -8,7 +8,7 @@ usage never bleed into each other.
 ai claude company              # company account, company workspace
 ai codex  personal             # personal account, personal workspace
 ai codex  company --account personal   # company workspace, personal account (mix freely)
-ai gui    company              # open Chrome on the dedicated work profile
+ai gui    company              # open the company Claude desktop app (isolated profile)
 ai doctor                      # diagnose the whole setup
 ```
 
