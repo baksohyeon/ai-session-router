@@ -381,6 +381,18 @@ cmd_doctor() {
       [[ -d "$r" ]] && print -r -- "  $t/$a: $r (exists)" || print -r -- "  $t/$a: $r (missing)"
     done
   done
+  print -r -- "gui desktop apps:"
+  local gapp gbundle gd
+  for gapp in ${=AI_GUI_APPS}; do
+    gbundle="$(gui_app_bundle "$gapp")"
+    [[ -d "$gbundle" ]] && print -r -- "  $gapp app: $gbundle (present)" \
+                        || print -r -- "  $gapp app: $gbundle (NOT FOUND)"
+    for a in personal company; do
+      gd="$(gui_app_dataprefix "$gapp")$a"
+      [[ -d "$gd" ]] && print -r -- "    data/$a: $gd (exists)" \
+                     || print -r -- "    data/$a: $gd (missing)"
+    done
+  done
   print -r -- "log resolution (examples):"
   print -r -- "  company/claude/personal -> $(log_dir company claude personal)"
   print -r -- "config: ${_cfg} $([[ -f "$_cfg" ]] && print -- '(loaded)' || print -- '(defaults)')"
