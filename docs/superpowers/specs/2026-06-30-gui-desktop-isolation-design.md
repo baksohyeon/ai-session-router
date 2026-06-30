@@ -107,10 +107,16 @@ zsh launcher → follow repo convention (no heavyweight unit harness):
 - Manual: run `ai gui personal` and `ai gui company` together; confirm each keeps a
   distinct login.
 
-## 10. Known risks
+## 10. Known risks / findings
 
-- ChatGPT.app's respect for `--user-data-dir` is unverified (app not in scope yet);
-  validate when that iteration starts.
+- **ChatGPT.app cannot be isolated via `--user-data-dir` (resolved 2026-06-30).** The
+  macOS ChatGPT app is a **native Swift/AppKit** app (`ChatGPT.framework`, `libswift*`,
+  Sparkle, LiveKitWebRTC; no Electron/Chromium framework), so the Chromium-only
+  `--user-data-dir` flag is ignored — both accounts would share one login. ChatGPT is
+  therefore **not** a native-registry candidate. Future ChatGPT account isolation must
+  use the **browser-profile path** (Chrome "Work" profile → `chatgpt.com`), which the
+  existing browser fallback already provides. Only Electron desktop apps (Claude.app) get
+  the native-isolation treatment.
 - If a future macOS / Claude.app update changes single-instance handling, `open -n`
   behavior must be re-checked.
 
@@ -122,6 +128,15 @@ zsh launcher → follow repo convention (no heavyweight unit harness):
 
 ## 12. Out of scope (explicit)
 
-- ChatGPT / Codex GUI (next iteration).
+- ChatGPT / Codex GUI (next iteration). Note: ChatGPT, when added, goes through the
+  **browser-profile** path, not the native registry (see §10) — the registry is for
+  Electron apps only.
 - Identity axis generalization beyond personal|company (sub-project B).
 - Any orchestration / multi-agent logic (sub-projects C/D).
+
+## 13. Correction applied after the ChatGPT finding
+
+The registry (`gui_app_bundle` / `gui_app_dataprefix`) carries **only Electron apps**.
+The earlier speculative `chatgpt` stubs are removed, because a native app in the native
+registry would falsely imply `--user-data-dir` isolation works for it. ChatGPT support is
+deferred to a browser-profile implementation.
