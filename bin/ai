@@ -33,6 +33,9 @@ esac
 : "${AI_COMPANY_CHATGPT_URL:=https://chatgpt.com/}"
 : "${AI_COMPANY_CLAUDE_URL:=https://claude.ai/}"
 : "${AI_SHARED:=$HOME/.ai-shared}"
+: "${AI_CLAUDE_APP:=/Applications/Claude.app}"
+: "${AI_CLAUDE_APP_DATA_PREFIX:=$HOME/.claude-app-}"
+: "${AI_GUI_APPS:=claude}"
 
 _cfg="${XDG_CONFIG_HOME:-$HOME/.config}/ai-session-router/router.env"
 [[ -f "$_cfg" ]] && source "$_cfg"
@@ -58,6 +61,23 @@ cfg_env_name() {
   case "$1" in
     claude) print -r -- "CLAUDE_CONFIG_DIR" ;;
     codex)  print -r -- "CODEX_HOME" ;;
+  esac
+}
+
+# Native-isolation registry — Electron apps ONLY. The --user-data-dir mechanism is
+# Chromium-specific; native AppKit apps (e.g. ChatGPT.app) ignore it, so they must NOT
+# be listed here. Future ChatGPT isolation goes through the browser-profile path instead.
+gui_app_bundle() {  # $1 app name -> bundle path
+  case "$1" in
+    claude)  print -r -- "$AI_CLAUDE_APP" ;;
+    *) return 1 ;;
+  esac
+}
+
+gui_app_dataprefix() {  # $1 app name -> data-dir prefix (account appended by caller)
+  case "$1" in
+    claude)  print -r -- "$AI_CLAUDE_APP_DATA_PREFIX" ;;
+    *) return 1 ;;
   esac
 }
 
@@ -110,6 +130,15 @@ _launch_chrome_profile() {  # $1 profile, rest = URLs (company identity)
       return 1 ;;
     *) return 1 ;;
   esac
+}
+
+_has_app_bundle() {  # $1 = /Applications/Foo.app — macOS .app bundles are directories
+  [[ "$AI_OS" == macos && -d "$1" ]]
+}
+
+_launch_app_isolated() {  # $1 bundle, $2 data-dir — new isolated instance (macOS)
+  mkdir -p "$2"
+  open -n -a "$1" --args --user-data-dir="$2"
 }
 
 _os_label() {
@@ -242,8 +271,8 @@ run_tool() {  # <tool> <workspace> [--account X] [-- passthrough...]
   esac
 }
 
-cmd_gui() {  # personal|company
-  case "${1:-}" in
+_gui_browser() {  # personal|company — legacy browser identity path (also the fallback)
+  case "$1" in
     personal)
       if _has_browser edge; then print -r -- "→ gui personal: Microsoft Edge"; _launch_edge
       else warn "Microsoft Edge not found; opening default browser."; _open_url "$AI_COMPANY_CLAUDE_URL"; fi ;;
@@ -255,6 +284,53 @@ cmd_gui() {  # personal|company
       else warn "Google Chrome not found; cannot open dedicated company profile."; return 1; fi ;;
     *) print -r -- "usage: ai gui <personal|company>" >&2; return 2 ;;
   esac
+}
+
+cmd_gui() {  # <personal|company> [--browser] [--dry-run]
+  local id="" browser=0 dry=0
+  while (( $# )); do
+    case "$1" in
+      --browser) browser=1; shift ;;
+      --dry-run) dry=1; shift ;;
+      personal|company) id="$1"; shift ;;
+      *) print -r -- "usage: ai gui <personal|company> [--browser] [--dry-run]" >&2; return 2 ;;
+    esac
+  done
+  valid_ws "$id" || { print -r -- "usage: ai gui <personal|company> [--browser] [--dry-run]" >&2; return 2; }
+
+  # Forced browser, or no native GUI on this OS -> legacy browser identity path.
+  if (( browser )) || [[ "$AI_OS" != macos ]]; then
+    if (( dry )); then
+      print -r -- "gui (browser) id=$id"
+      print -r -- "  would run the browser identity path (Edge / Chrome profile + URLs)"
+      return 0
+    fi
+    _gui_browser "$id"; return
+  fi
+
+  # Native mode: launch each configured app, isolated by account.
+  local app bundle datadir missing=0
+  for app in ${=AI_GUI_APPS}; do
+    bundle="$(gui_app_bundle "$app")" || { warn "unknown gui app: $app"; continue; }
+    datadir="$(gui_app_dataprefix "$app")$id"
+    if (( dry )); then
+      print -r -- "gui (native, macOS) app=$app id=$id"
+      if [[ -d "$bundle" ]]; then print -r -- "  bundle:   $bundle (exists)"
+      else print -r -- "  bundle:   $bundle (MISSING -> real run uses browser fallback)"; fi
+      print -r -- "  data-dir: $datadir"
+      print -r -- "  command:  open -n -a \"$bundle\" --args --user-data-dir=\"$datadir\""
+      continue
+    fi
+    if _has_app_bundle "$bundle"; then
+      print -r -- "→ gui $id: $app app (isolated)  data-dir=$datadir"
+      _launch_app_isolated "$bundle" "$datadir"
+    else
+      warn "$app app not found at $bundle; using browser fallback."
+      missing=1
+    fi
+  done
+  (( missing )) && _gui_browser "$id"
+  return 0
 }
 
 cmd_shell() {  # personal|company
@@ -343,7 +419,7 @@ usage() {
   cat <<'EOF'
 ai — AI session router
 
-  ai gui     <personal|company>
+  ai gui     <personal|company> [--browser] [--dry-run]
   ai shell   <personal|company>
   ai claude  <personal|company> [--account personal|company] [-- args...]
   ai codex   <personal|company> [--account personal|company] [-- args...]
