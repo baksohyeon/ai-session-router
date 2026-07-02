@@ -45,7 +45,9 @@ cd ~/dev/personal/ai-session-router
 ai doctor              # verify
 ```
 
-Then log in once per account, e.g. `ai codex company` → Codex login flow.
+Then log in once per account, e.g. `ai codex company -- login` → Codex login flow.
+For OpenAI/Codex specifics — auth modes, API-key profiles, and why ChatGPT web account
+switching is **not** Codex account switching — see [docs/CODEX-AUTH.md](docs/CODEX-AUTH.md).
 
 ## Configuration
 
@@ -88,7 +90,10 @@ tmux, sleep control, mobile clients, and end-to-end workflows.
 This repo ships **no secrets**. Account config roots (`~/.claude-*`, `~/.codex-*`) and
 logs are never tracked — see [.gitignore](.gitignore). Tokens stay under each account's
 own config root. The router only ever reads filenames (never contents) when warning
-about secret-looking files near a workspace.
+about secret-looking files near a workspace. `ai doctor` inspects Codex `auth.json` only
+by *presence*, file *mode*, and a non-reversible *fingerprint* — never its contents — and
+warns on loose permissions or a cloned (stale-token) copy. Codex auth details:
+[docs/CODEX-AUTH.md](docs/CODEX-AUTH.md).
 
 ## License
 

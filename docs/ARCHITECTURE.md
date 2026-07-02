@@ -65,7 +65,18 @@ never moved; seed new roots by cloning or by a fresh login.
 - **Codex internal logs** can't be redirected by CLI flag; they live under
   `$CODEX_HOME/log/` (follow the account). The workspace transcript compensates.
 - **Claude** has no general log-dir flag (only `--debug-file`). Same compensation.
-- **Version drift**: tools auto-update; the wrapper hardcodes no versions.
+- **Claude auth on macOS** lives in the Keychain, not under `CLAUDE_CONFIG_DIR`. It
+  *is* isolated per account, but via an **undocumented, version-dependent** service
+  name `Claude Code-credentials-<sha256(config-dir)[:8]>` (verified on Claude Code
+  v2.1.198 — the public docs still describe a single shared entry). `ai doctor`
+  therefore **verifies** the entry exists (presence only, never the secret) rather
+  than assuming, and flags it as re-verify-after-upgrade. Two "fixes" are macOS
+  dead-ends and deliberately not attempted: forcing file-based `.credentials.json`
+  (no supported switch) and per-account `CLAUDE_CODE_OAUTH_TOKEN` (triggers issue
+  \#37512, which deletes the shared Keychain entry on exit). Codex has no such
+  issue — `auth.json` is a plain file under `CODEX_HOME`.
+- **Version drift**: tools auto-update; the wrapper hardcodes no versions. The macOS
+  Keychain hash above is the one place this can bite — hence the doctor verification.
 
 ## 6. MCP — deliberately out of scope (v1)
 
