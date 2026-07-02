@@ -110,5 +110,5 @@ version you run.)
   directory is already inside the selected workspace; only when you launch from outside the
   workspace do they move you to its root (with a warning). `ai gui` ignores your location.
 
-See also [ARCHITECTURE.md](ARCHITECTURE.md), [PORTABILITY.md](PORTABILITY.md), and
-[CODEX-AUTH.md](CODEX-AUTH.md).
+See also [ARCHITECTURE.md](ARCHITECTURE.md), [PORTABILITY.md](PORTABILITY.md),
+[CODEX-AUTH.md](CODEX-AUTH.md), [SURFACES.md](SURFACES.md), and [THREAT-MODEL.md](THREAT-MODEL.md).
