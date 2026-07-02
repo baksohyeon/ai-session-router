@@ -1,7 +1,7 @@
-# ai — AI session router
+# ai: AI session router
 
 One command to launch **Claude Code** or **Codex** with the right **account**, in the
-right **workspace**, with the right **browser identity** — so your personal and work AI
+right **workspace**, with the right **browser identity**, so your personal and work AI
 usage never bleed into each other.
 
 ```sh
@@ -30,7 +30,7 @@ Shared dev tools (`ssh`, git, your editor, secret managers) stay global and unto
 
 ## How it works (one paragraph)
 
-Claude Code and Codex resolve **all** their state — tokens, sessions, config, agents —
+Claude Code and Codex resolve **all** their state (tokens, sessions, config, agents)
 from a single directory pointed to by an env var (`CLAUDE_CONFIG_DIR` / `CODEX_HOME`).
 "Switching accounts" is just pointing that var at a different folder before launching.
 `ai` wraps that with default rules, guardrails, logging, and per-OS browser/tmux
@@ -46,8 +46,8 @@ ai doctor              # verify
 ```
 
 Then log in once per account, e.g. `ai codex company -- login` → Codex login flow.
-For OpenAI/Codex specifics — auth modes, API-key profiles, and why ChatGPT web account
-switching is **not** Codex account switching — see [docs/en/CODEX-AUTH.md](docs/en/CODEX-AUTH.md).
+For OpenAI/Codex specifics (auth modes, API-key profiles, and why ChatGPT web account
+switching is **not** Codex account switching) see [docs/en/CODEX-AUTH.md](docs/en/CODEX-AUTH.md).
 
 ## Configuration
 
@@ -76,14 +76,16 @@ ai doctor | ai remote doctor | ai logs
 
 ## Platform support
 
-zsh required. macOS is fully tested. Linux paths (xdg-open, util-linux `script`,
-`ss`-based checks) are provided and smoke-tested. See
-[docs/en/PORTABILITY.md](docs/en/PORTABILITY.md) for the support matrix.
+zsh required. macOS is fully tested; Linux is provided and smoke-tested. On **Windows use
+WSL with zsh, never PowerShell** (`bin/ai` is a zsh script). Which tool, surface, and OS
+combinations isolate, and why, is in [docs/en/SUPPORT.md](docs/en/SUPPORT.md)
+([한국어](docs/ko/SUPPORT.md)). The OS build matrix is in
+[docs/en/PORTABILITY.md](docs/en/PORTABILITY.md).
 
 ## Remote access
 
 Running `ai` on one machine and attaching from your phone, another laptop, or anywhere
-else — without losing the session when the network drops or the lid closes — is
+else, without losing the session when the network drops or the lid closes, is
 covered in [docs/en/REMOTE-ACCESS.md](docs/en/REMOTE-ACCESS.md)
 ([한국어](docs/ko/REMOTE-ACCESS.md)). Network fundamentals through Tailscale, SSH,
 tmux, sleep control, mobile clients, and end-to-end workflows.
@@ -91,13 +93,13 @@ tmux, sleep control, mobile clients, and end-to-end workflows.
 ## Security
 
 This repo ships **no secrets**. Account config roots (`~/.claude-*`, `~/.codex-*`) and
-logs are never tracked — see [.gitignore](.gitignore). Tokens stay under each account's
+logs are never tracked; see [.gitignore](.gitignore). Tokens stay under each account's
 own config root. The router only ever reads filenames (never contents) when warning
 about secret-looking files near a workspace. `ai doctor` inspects Codex `auth.json` only
-by *presence*, file *mode*, and a non-reversible *fingerprint* — never its contents — and
+by *presence*, file *mode*, and a non-reversible *fingerprint* (never its contents), and
 warns on loose permissions or a cloned (stale-token) copy. Codex auth details:
 [docs/en/CODEX-AUTH.md](docs/en/CODEX-AUTH.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
