@@ -1,6 +1,6 @@
 # Orchestration Plan — multi-machine · multi-account · multi-agent (draft)
 
-> Status: **draft for review** (2026-07-02). Not committed. Extends [ARCHITECTURE.md](ARCHITECTURE.md).
+> Status: **draft for review** (2026-07-02, committed on `main`). Extends [ARCHITECTURE.md](ARCHITECTURE.md).
 > Research basis: primary sources (Claude Code / Codex CLI docs, GitHub) surveyed mid-2026.
 > Treat exact flags/model IDs as *verify-at-invocation* — both CLIs auto-update.
 
