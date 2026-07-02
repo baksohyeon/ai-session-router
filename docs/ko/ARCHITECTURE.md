@@ -53,7 +53,7 @@ codex "$@"                                    # everything else inherits both
 
 `<workspace>/.ai-logs/<tool>/<account>-account/session-<timestamp>.log`.
 **로그는 워크스페이스가, 인증은 계정이 관리한다.** 터미널 기록은
-`script(1)`로 남기며(TTY를 보존하므로 인터랙티브 TUI도 그대로 동작한다).
+`script(1)`로 남긴다. TTY를 보존하므로 인터랙티브 TUI도 그대로 동작한다.
 
 ### 브라우저 격리 (`ai gui`)
 

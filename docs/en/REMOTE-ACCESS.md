@@ -2,13 +2,12 @@
 
 **Language:** English · [한국어](../ko/REMOTE-ACCESS.md)
 
-How to run AI CLI sessions on one machine and reach them from anywhere — your other
-laptop, your phone on the train, a hotel Wi-Fi — without losing the session when the
+How to run AI CLI sessions on one machine and reach them from anywhere (your other
+laptop, your phone on the train, a hotel Wi-Fi) without losing the session when the
 network drops or the lid closes.
 
-This document is intentionally **concept-first**. Every section explains *why* before
-*how*, because the reason most "just type this" guides break in real life is that the
-reader doesn't know what failure mode they're hitting.
+This document is **concept-first**. Every section explains *why* before *how*. Most
+"just type this" guides break because you don't know which failure mode you're hitting.
 
 ### Conventions
 
@@ -50,8 +49,7 @@ reader doesn't know what failure mode they're hitting.
 | D | Always-on home server (mini PC / Raspberry Pi) runs Claude, every device attaches | Tailscale + SSH + tmux on server (no caffeinate needed) |
 | E | Coffee shop laptop loses Wi-Fi mid-session, reattaches with everything intact | mosh OR tmux + SSH reconnect |
 
-The order of difficulty roughly matches the order above. Pick the lightest one that
-solves your problem.
+Difficulty increases down the list. Pick the lightest option that solves your problem.
 
 ---
 
@@ -59,7 +57,7 @@ solves your problem.
 
 ### 1.1 IP addresses: public vs private
 
-Every device on a network has an **IP address**. The Internet has two relevant flavors:
+Every device on a network has an **IP address**. Two kinds matter here:
 
 - **Public IP** — globally unique, routable from anywhere on the Internet. Your ISP
   gives one (or sometimes zero — see CGNAT below) to your home router.
@@ -79,11 +77,11 @@ performs **NAT** (Network Address Translation): outbound traffic is rewritten to
 appear from the public IP, and replies are routed back to the right internal device
 based on a port mapping the router remembers.
 
-The key consequence: **outbound connections work, inbound connections don't.** When
-some random server on the Internet tries to reach `your.public.ip`, the router has no
-mapping to forward the packet to your laptop. It drops it.
+The consequence: **outbound connections work, inbound connections don't.** When a
+server on the Internet tries to reach `your.public.ip`, the router has no mapping to
+forward the packet to your laptop, so it drops it.
 
-This is why "just SSH into my home computer from the train" doesn't work out of the box.
+That is why "just SSH into my home computer from the train" fails out of the box.
 
 ### 1.3 Ports — the second half of an address
 
@@ -106,36 +104,36 @@ pair. If nothing is listening, the connection is refused immediately.
 Before Tailscale-style tools, the options were:
 
 1. **Port forwarding on the router.** Tell the router "incoming TCP 22 → 192.168.1.42:22".
-   Then expose your home IP via dynamic DNS (e.g. `me.duckdns.org`). Downsides: requires
-   router access, ISP may block (CGNAT), your SSH port is now on the public Internet
-   and gets attacked constantly.
+   Then expose your home IP via dynamic DNS (e.g. `me.duckdns.org`). Downsides: it needs
+   router access, the ISP may block it (CGNAT), and your SSH port now sits on the public
+   Internet where bots attack it around the clock.
 2. **A reverse SSH tunnel to a VPS.** Your home box connects *outward* to a VPS and
    keeps the connection open; you SSH into the VPS, which forwards to home.
 3. **Cloudflare Tunnel / ngrok / frp.** Similar idea, but easier to set up.
 4. **A real VPN** (OpenVPN, WireGuard, IPsec). You join a private network from outside
    and reach home as if you were on the LAN. Historically painful to configure.
 
-All of these work. All of them are more setup, more attack surface, or more vendor
-lock-in than mesh VPN. Hence §5.
+All of these work. Each one costs you more setup, more attack surface, or more vendor
+lock-in than a mesh VPN, which is what §5 covers.
 
 ### 1.5 CGNAT — when you don't even have a public IP
 
 Some ISPs (mobile networks, many APAC fiber providers) don't give you a unique public
 IP at all. They put you behind a *carrier-level* NAT. Port forwarding is impossible.
-Tailscale and other mesh VPNs work *because* they don't need inbound connectivity —
+Tailscale and other mesh VPNs work *because* they don't need inbound connectivity:
 both ends connect outward to a relay and meet in the middle.
 
 ### 1.6 The corporate firewall
 
 Work networks usually allow outbound HTTPS (443) and not much else. Outbound SSH (22)
-is often blocked. This is why some tools tunnel SSH over HTTPS — and why Tailscale
+is often blocked. That is why some tools tunnel SSH over HTTPS, and why Tailscale
 falls back to a relay (DERP) on port 443 when direct UDP fails.
 
 ### 1.7 IPv6 footnote
 
-IPv6 gives every device a globally unique address and theoretically removes the need
-for NAT. In practice, residential IPv6 is still patchy and firewalls usually block
-inbound traffic anyway. You can't rely on IPv6 to solve §1.2.
+IPv6 gives every device a globally unique address and in theory removes the need for
+NAT. Residential IPv6 remains patchy, and firewalls block inbound traffic anyway. Don't
+count on IPv6 to solve §1.2.
 
 ---
 
@@ -147,11 +145,11 @@ inbound traffic anyway. You can't rely on IPv6 to solve §1.2.
 authenticated terminal on a remote machine. Also moves files (`scp`, `sftp`, `rsync`),
 forwards ports, and tunnels arbitrary TCP.
 
-If you only learn one networking tool well, learn this one.
+Learn this one tool well before any other networking tool.
 
 ### 2.2 Public-key authentication
 
-Passwords are weak and brute-forceable. SSH supports **key pairs**:
+Passwords are weak and easy to brute-force. SSH supports **key pairs**:
 
 - A **private key** lives on the client (your laptop, phone). Never leaves it.
 - A **public key** is copied to the server and listed in `~/.ssh/authorized_keys`.
@@ -195,7 +193,7 @@ Host *
     IdentityFile ~/.ssh/id_ed25519
 ```
 
-After this, `ssh user@host` is silent — no password, no passphrase prompt.
+After this, `ssh user@host` runs silent, with no password and no passphrase prompt.
 
 ### 2.4 `~/.ssh/config` — your address book
 
@@ -230,9 +228,9 @@ sudo systemsetup -getremotelogin
 ssh localhost
 ```
 
-Default port 22. Changing the port to something high (e.g. 22222) reduces noise from
-internet bots — but **only if the SSH port is on the public Internet at all**. With
-Tailscale it's irrelevant because the port isn't exposed publicly.
+Default port 22. Moving the port to something high (e.g. 22222) cuts noise from
+internet bots, but **only if the SSH port faces the public Internet at all**. With
+Tailscale the port stays private, so the change buys you nothing.
 
 ### 2.6 Port forwarding — three flavors
 
@@ -258,12 +256,11 @@ knowing.
 ### 2.7 Mosh — SSH for flaky networks
 
 [Mosh](https://mosh.org/) is a UDP-based replacement for the SSH session (still uses
-SSH for the initial login). Survives IP changes, suspends, and lossy networks. If
-you're SSHing from a phone on mobile data, mosh is dramatically better than plain
-SSH. Install with `brew install mosh` on both ends; firewalls need to allow UDP in the
-60000–61000 range.
+SSH for the initial login). It survives IP changes, suspends, and lossy networks. When
+you SSH from a phone on mobile data, mosh beats plain SSH by a wide margin. Install with
+`brew install mosh` on both ends; firewalls need to allow UDP in the 60000–61000 range.
 
-Tailscale + mosh + tmux is the gold-standard mobile combo.
+Pair Tailscale, mosh, and tmux for the strongest mobile setup.
 
 ### 2.8 Hardening
 
@@ -279,8 +276,8 @@ PubkeyAuthentication yes
 Reload: `sudo launchctl kickstart -k system/com.openssh.sshd` (macOS) or
 `sudo systemctl restart sshd` (Linux).
 
-Optional: `fail2ban` to ban brute-force IPs. With Tailscale-only access, none of this
-is required because the port is never publicly reachable.
+Optional: `fail2ban` to ban brute-force IPs. Tailscale-only access skips all of this,
+since the port never becomes publicly reachable.
 
 ---
 
@@ -294,8 +291,8 @@ When you `ssh user@host` and run something long, the connection is fragile:
 - Network drops → process dies.
 - Laptop sleeps → connection dies → process dies.
 
-tmux runs a **persistent session on the server** that *outlives* your SSH connection.
-You attach to it, do work, detach. The shell and everything in it stays running.
+tmux runs a **persistent session on the server** that outlives your SSH connection.
+You attach to it, work, then detach. The shell and everything in it keeps running.
 
 ### 3.2 Model: server, session, window, pane
 
@@ -391,10 +388,10 @@ ssh -t home 'tmux new -As claude'
 
 - tmux sessions die if the **server reboots**. They are not on-disk.
   Use [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) if you care.
-- Closing the parent terminal does NOT kill tmux. That's the whole point.
+- Closing the parent terminal does NOT kill tmux. That's the point of it.
 - A tmux session belongs to the **user** running `tmux`. You can't attach to someone
   else's session without privilege.
-- tmux ≠ screen. If `screen` is what you remember from 2010, tmux is the modern one.
+- tmux ≠ screen. If you remember `screen` from 2010, tmux is the modern replacement.
 
 ---
 
@@ -409,7 +406,7 @@ ssh -t home 'tmux new -As claude'
 - **Lid-close sleep (MacBooks)** — *forced* sleep when the lid shuts unless an
   external display + power + keyboard/mouse is attached (clamshell mode).
 
-A sleeping Mac cannot run your tmux session. The CPU literally isn't executing.
+A sleeping Mac cannot run your tmux session. The CPU has stopped executing.
 
 ### 4.2 `caffeinate` — the easy way
 
@@ -454,8 +451,8 @@ sudo pmset -c sleep 0
 sudo pmset -c sleep 30
 ```
 
-`pmset` settings persist across reboots. Use them when you want a *server-like* Mac
-that never sleeps on AC power. Use `caffeinate` for ad-hoc, scoped overrides.
+`pmset` settings persist across reboots. Reach for them when you want a *server-like*
+Mac that never sleeps on AC power. Use `caffeinate` for one-off, scoped overrides.
 
 ### 4.4 Lid-close on MacBooks
 
@@ -463,9 +460,8 @@ By default, closing the lid forces sleep regardless of `caffeinate` or `pmset`. 
 intended exception is **clamshell mode**: connect external power + display +
 keyboard/mouse and the Mac stays on with the lid shut.
 
-Hacks like `sudo pmset -a disablesleep 1` can bypass this entirely but are not
-recommended — they keep the laptop hot and discharging while closed in a bag. The
-sensible options are:
+Hacks like `sudo pmset -a disablesleep 1` bypass this, but avoid them. They keep the
+laptop hot and discharging while it sits closed in a bag. Better options:
 
 - Leave the lid open (use a stand).
 - Use clamshell mode with a real desk setup.
@@ -476,16 +472,16 @@ sensible options are:
 
 - **Power Nap** lets the Mac do some background work (Time Machine, Mail) during
   sleep. It does *not* keep arbitrary user processes running. Don't rely on it.
-- **Wake on Network access** can wake the Mac when it receives a special packet —
-  useful so you can `ssh` in and the box wakes up, but only works on the same LAN
-  unless you set up Wake-on-WAN proxying.
+- **Wake on Network access** wakes the Mac when it receives a special packet. That lets
+  you `ssh` in and have the box wake up, but it works only on the same LAN unless you
+  set up Wake-on-WAN proxying.
 
 ### 4.6 GUI alternative: Amphetamine
 
 If you prefer a menu-bar UI with conditions ("stay awake while screen is mirrored",
 "stay awake until 11pm"), [Amphetamine](https://apps.apple.com/app/amphetamine/id937984704)
-wraps `caffeinate`-equivalent behavior with rules. Functionally a superset, but the
-CLI is faster for one-offs.
+wraps `caffeinate`-equivalent behavior with rules. It covers everything the CLI does,
+though the CLI stays faster for one-offs.
 
 ---
 
@@ -494,19 +490,19 @@ CLI is faster for one-offs.
 ### 5.1 What it is
 
 [Tailscale](https://tailscale.com) is a **mesh VPN built on WireGuard**. You install
-it on every device you own, log into the same account, and now every device can reach
-every other device by name as if they were on the same LAN. From anywhere.
+it on every device you own and log into the same account, and every device can then
+reach every other device by name, from anywhere, as if they shared a LAN.
 
 ### 5.2 Why it works without port forwarding
 
 Both devices initiate **outbound** connections to Tailscale's coordination service.
 Tailscale uses NAT-traversal (STUN, hole punching) to get the two devices talking
-**directly** in most cases. When direct connection isn't possible (some symmetric NATs,
-corporate firewalls), traffic falls back to a **DERP relay** on TCP/443 — which any
-network that allows web browsing allows.
+**directly** in most cases. When a direct connection fails (some symmetric NATs,
+corporate firewalls), traffic falls back to a **DERP relay** on TCP/443, which any
+network that allows web browsing also allows.
 
-End result: you never open a port on your router. The "incoming connection" problem
-from §1.2 disappears.
+You never open a port on your router, and the "incoming connection" problem from §1.2
+disappears.
 
 ### 5.3 Concepts you should know
 
@@ -561,9 +557,8 @@ sudo tailscale up --ssh
 ```
 
 Now `ssh user@home-mac` from any logged-in tailnet device succeeds without managing
-keys. Auth is governed by ACLs you write in the admin console. Combine this with
-2FA on your Tailscale identity (required for `check` ACL rules) for the strongest
-practical setup.
+keys. ACLs you write in the admin console govern auth. Add 2FA on your Tailscale
+identity (required for `check` ACL rules) for the strongest practical setup.
 
 You can still use plain SSH alongside it.
 
@@ -577,8 +572,8 @@ sudo tailscale set --hostname home-mac
 ```
 
 Pick short, distinctive names. Tailscale defaults to your machine's local hostname
-(what `hostname` returns), which is usually noisy — override it explicitly so commands
-like `ssh home-mac` stay readable.
+(what `hostname` returns), which tends to be noisy, so override it so commands like
+`ssh home-mac` stay readable.
 
 ### 5.7 Subnet router — reaching LAN devices
 
@@ -604,8 +599,7 @@ sudo tailscale set --exit-node=<node-name> --exit-node-allow-lan-access
 
 Useful when you want all your traffic to appear from a specific location (your home
 IP for geo-locked services, for instance). **Don't use a work device as your personal
-exit node** — that mixes traffic across identities, which is exactly what `ai`
-exists to prevent.
+exit node.** That mixes traffic across identities, the exact problem `ai` prevents.
 
 ### 5.9 ACLs — minimal example
 
@@ -631,13 +625,13 @@ other node, on any port." Tighten it with tags:
 }
 ```
 
-`check` means "allow but re-prompt for SSO every N hours." Worth it.
+`check` means "allow but re-prompt for SSO every N hours," which is worth enabling.
 
 ### 5.10 Funnel & Serve — when you actually want to expose something
 
 - `tailscale serve` — share a local port to your tailnet over HTTPS. No public Internet.
 - `tailscale funnel` — same, but expose to the **public Internet** through Tailscale's
-  edge. Great for webhook receivers, demos.
+  edge. Good for webhook receivers and demos.
 
 Examples:
 
@@ -653,11 +647,11 @@ Do **not** funnel your SSH or Claude CLI. Funnel is for public web endpoints.
 
 ### 5.11 Tailscale on a work laptop
 
-Read §8 first. Short version:
+Read §8 first. In brief:
 
-- Personal Tailscale account on a work laptop ≈ shadow IT. Most security policies
-  forbid this.
-- Some employers run a corporate Tailscale tenant — use **that** if available.
+- A personal Tailscale account on a work laptop counts as shadow IT. Most security
+  policies forbid it.
+- Some employers run a corporate Tailscale tenant. Use **that** one if it exists.
 - If you must mix, install Tailscale on a *personal* device that can act as the bridge
   (subnet router), and keep the work device off the personal tailnet.
 
@@ -669,9 +663,9 @@ Read §8 first. Short version:
 
 | App | Notes |
 |-----|------|
-| **Blink Shell** | Paid. Best in class. mosh built in. Keyboard support, scriptable. Worth the money. |
-| **Termius** | Free tier OK; cloud key sync; cross-platform. Be aware: keys can be stored in their cloud. |
-| **a-Shell** | Free, opensource. Limited but useful for quick SSH. |
+| **Blink Shell** | Paid, and the strongest option. mosh built in, keyboard support, scriptable. |
+| **Termius** | Free tier is fine; cloud key sync; cross-platform. Note that it can store keys in its cloud. |
+| **a-Shell** | Free and open source. Limited, but handy for quick SSH. |
 | **Tailscale (iOS app)** | Required to put the phone on the tailnet. Always-on toggle works well in practice. |
 
 ### 6.2 Android
@@ -685,9 +679,9 @@ Read §8 first. Short version:
 
 ### 6.3 Key management on a phone
 
-The right way: generate a key **on the phone**, copy its public key to the server,
-keep the private key on the phone only. The wrong way: paste your laptop's private
-key into a cloud-syncing notes app to get it onto the phone.
+Generate a key **on the phone**, copy its public key to the server, and keep the
+private key on the phone only. Never paste your laptop's private key into a
+cloud-syncing notes app to move it onto the phone.
 
 If a phone is lost, you should be able to remove its public key from the server's
 `authorized_keys` (or, with Tailscale SSH, just remove the device from the tailnet)
@@ -695,9 +689,8 @@ without affecting other devices.
 
 ### 6.4 The "phone keyboard sucks" reality
 
-For more than 30 seconds of typing, a Bluetooth keyboard turns a phone into a
-genuinely usable mini-laptop. Worth keeping a small foldable one in your bag if you
-plan to do this regularly.
+For more than 30 seconds of typing, a Bluetooth keyboard turns a phone into a usable
+mini-laptop. Keep a small foldable one in your bag if you plan to do this often.
 
 ---
 
@@ -738,8 +731,8 @@ tmux attach -t claude
 exit
 ```
 
-Connection drops on the subway tunnel? Reconnect, `tmux attach -t claude`, you're
-back. Want it to survive *roaming* (Wi-Fi → LTE)? Add mosh:
+If the connection drops in a subway tunnel, reconnect and run `tmux attach -t claude`
+to pick up where you left off. To survive *roaming* (Wi-Fi → LTE), add mosh:
 
 ```sh
 mosh $USER@home-mac -- tmux new -As claude
@@ -757,13 +750,13 @@ If your work laptop allows installing Tailscale (check §8), same as A. Otherwis
 
 ### 7.3 Workflow C — home → work laptop
 
-In most workplaces this is intentionally prevented and trying to bypass it is a
-fireable offense. **Don't.** If remote work is sanctioned, your employer provides the
-mechanism (corporate VPN, virtual desktop). Use it.
+Most workplaces block this on purpose, and bypassing it is a fireable offense.
+**Don't.** When remote work is sanctioned, your employer provides the mechanism
+(corporate VPN, virtual desktop). Use it.
 
 ### 7.4 Workflow D — always-on home server
 
-The most robust setup. A small mini-PC or Raspberry Pi at home, plugged in 24/7:
+This is the most robust setup: a small mini-PC or Raspberry Pi at home, plugged in 24/7.
 
 - Runs Tailscale, tmux, sshd.
 - Hosts the Claude / Codex sessions.
@@ -793,8 +786,8 @@ ssh $USER@home-server
 tmux attach -t ai
 ```
 
-Tradeoffs: extra hardware ($), one more box to maintain (security updates), some
-performance ceiling (a Pi is fine for chat, may struggle with large agentic loops).
+Tradeoffs: extra hardware ($), one more box to maintain (security updates), and a
+performance ceiling (a Pi handles chat fine but strains under large agentic loops).
 
 ### 7.5 Workflow E — flaky network on the road
 
@@ -802,10 +795,9 @@ performance ceiling (a Pi is fine for chat, may struggle with large agentic loop
 mosh $USER@home-server -- tmux new -As road
 ```
 
-mosh handles network drops, IP changes, and suspend/resume. tmux handles process
-persistence. Combined, you can close the laptop, walk into a tunnel, switch from
-Wi-Fi to LTE, open the laptop in a café 20 minutes later, and your session is right
-where you left it.
+mosh handles network drops, IP changes, and suspend/resume; tmux handles process
+persistence. Together they let you close the laptop, walk into a tunnel, switch from
+Wi-Fi to LTE, and open the laptop in a café 20 minutes later with the session intact.
 
 ---
 
@@ -837,20 +829,20 @@ Many corporate policies, in plain language:
 - **No remote access** to home machines that store work secrets. Even if it works
   technically, it's an exfiltration risk.
 
-The right move: ask your security/IT team in writing. They will almost always say
-*yes* to "Tailscale on my personal laptop", almost always say *it depends* for the
-work laptop, and the conversation itself usually keeps you out of trouble.
+Ask your security/IT team in writing. They tend to say *yes* to "Tailscale on my
+personal laptop", *it depends* for the work laptop, and the conversation itself keeps
+you out of trouble.
 
 ### 8.4 The `ai` router and security
 
-The whole point of [ai-session-router](../../README.md) is preventing identity mix-ups.
-Remote access changes the threat model slightly:
+[ai-session-router](../../README.md) exists to prevent identity mix-ups. Remote access
+shifts the threat model:
 
-- If a phone is compromised, an attacker who can unlock SSH can reach your home tailnet.
-- Therefore: SSH key passphrase + biometric unlock on the phone + the SSH client
-  requiring re-auth after backgrounding (Blink supports this; Termius supports it).
-- Logs are written to the **workspace** on the host where the AI tool ran — meaning
-  on the server, not the phone. That's intentional and correct.
+- If someone compromises a phone and can unlock SSH, they reach your home tailnet.
+- So require an SSH key passphrase, biometric unlock on the phone, and an SSH client
+  that re-authenticates after backgrounding (Blink and Termius both support this).
+- The AI tool writes logs to the **workspace** on the host where it ran, which means
+  the server, not the phone. That's intentional and correct.
 
 ### 8.5 What to do if you suspect a device is compromised
 
@@ -868,8 +860,8 @@ Remote access changes the threat model slightly:
 
 ### 9.1 "Connection refused"
 
-The TCP port is reachable but nothing is listening. Either the service is down or
-you're hitting the wrong port. On the server:
+The TCP port is reachable but nothing is listening. The service is down, or you're
+hitting the wrong port. On the server:
 
 ```sh
 # Is sshd running?
@@ -882,8 +874,8 @@ sudo lsof -iTCP:22 -sTCP:LISTEN
 
 ### 9.2 "Connection timed out"
 
-Something between you and the server is dropping packets — NAT, firewall, routing.
-With Tailscale, run on both ends:
+Something between you and the server is dropping packets: NAT, firewall, or routing.
+With Tailscale, run this on both ends:
 
 ```sh
 tailscale status               # both nodes online?
@@ -926,7 +918,7 @@ tailscale netcheck             # local network diagnostics
 ```
 
 If `netcheck` shows everything blocked except port 443, you're behind a strict
-firewall — DERP fallback should still work but will be slower.
+firewall. DERP fallback still works, but slower.
 
 ### 9.6 "MagicDNS doesn't resolve"
 
@@ -958,14 +950,14 @@ pmset -g assertions
 ```
 
 You should see a `PreventUserIdleSystemSleep` entry held by `caffeinate` or your
-running process. If not, your caffeinate exited or wasn't started.
+running process. If it's missing, your caffeinate exited or never started.
 
 ---
 
 ## 10. Integration with `ai`
 
-The `ai` command (this repo) already separates accounts/workspaces/browsers. Remote
-access adds *which host* to the mix, but the axes stay orthogonal.
+The `ai` command (this repo) already separates accounts, workspaces, and browsers.
+Remote access adds *which host* to the mix, and the axes stay independent.
 
 ### 10.1 Running `ai` over SSH
 
@@ -975,12 +967,12 @@ tmux new -As claude
 ai claude personal              # exactly the same as if you were sitting at the Mac
 ```
 
-The router's logs land where they always do: `<workspace>/.ai-logs/...` *on the host
-where ai ran* — which is the home Mac, not your phone. That's by design.
+The router writes its logs where it always does: `<workspace>/.ai-logs/...` *on the host
+where ai ran*, the home Mac rather than your phone. That's by design.
 
 ### 10.2 `ai remote doctor`
 
-This command reports — never configures — remote-access state:
+This command reports remote-access state and never configures it:
 
 - Tailscale status / IP / online peers
 - sshd listening?
@@ -1000,8 +992,8 @@ home-ai() {
 }
 ```
 
-Now `home-ai` from anywhere puts you in a tmux session running Claude on the home Mac
-with the right account/workspace.
+Now `home-ai` from anywhere drops you into a tmux session running Claude on the home
+Mac with the right account and workspace.
 
 ### 10.4 What `ai` deliberately does *not* do
 
@@ -1010,9 +1002,9 @@ with the right account/workspace.
 - It does **not** forward credentials over the network. Account auth lives where each
   account's config root lives, on the host running `ai`.
 
-These are intentional boundaries: a router is the wrong place to take responsibility
-for VPN setup, sleep policy, or remote process management. Use the tools in this
-document for those concerns; use `ai` for identity routing.
+These boundaries are deliberate. A router should not own VPN setup, sleep policy, or
+remote process management. Use the tools in this document for those concerns, and use
+`ai` for identity routing.
 
 ---
 

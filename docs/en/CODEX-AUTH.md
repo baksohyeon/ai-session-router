@@ -21,8 +21,8 @@ to log into each, and what OpenAI's account model does — and does **not** — 
 - OpenAI states this is **web-only** — it is **not** supported in the Codex desktop app or
   the native ChatGPT mobile app.
 
-So switching accounts in your browser does nothing for Codex. Codex resolves its identity
-from **`CODEX_HOME`** — a directory of state (`config.toml`, `auth.json`, `history.jsonl`,
+Switching accounts in your browser does nothing for Codex. Codex resolves its identity
+from **`CODEX_HOME`**, a directory of state (`config.toml`, `auth.json`, `history.jsonl`,
 logs). The router gives each account its own `CODEX_HOME` and launches Codex against it:
 
 ```
@@ -31,10 +31,10 @@ ai codex company        # CODEX_HOME=~/.codex-company
 ai codex company --account personal   # personal identity, company workspace
 ```
 
-That process-level directory isolation *is* the account separation. It works identically
-for the CLI. (The desktop app and CLI share the same underlying agent/config but may ship
-different bundled versions; the app does not currently honor an arbitrary per-launch
-`CODEX_HOME`, so the router is **CLI-first** — see [Not supported](#not-supported).)
+That process-level directory isolation *is* the account separation, and it works the same
+for the CLI. The desktop app and CLI share the same underlying agent/config but may ship
+different bundled versions. The app does not yet honor an arbitrary per-launch
+`CODEX_HOME`, so the router is **CLI-first** (see [Not supported](#not-supported)).
 
 ## Auth modes per profile
 
@@ -50,7 +50,7 @@ for you; it only **reports** what each root uses (`ai doctor`) and never reads t
 
 For **robust, verifiable isolation, prefer file-backed** (the default on this machine). If
 you set `keyring`, isolation depends on the OS keyring keying entries per `CODEX_HOME`,
-which is not guaranteed — `ai doctor` flags this so you verify in-session.
+which is not guaranteed; `ai doctor` flags this so you can verify it in-session.
 
 ## Logging in to each profile
 
@@ -75,15 +75,15 @@ ai doctor                                     # per-account mode + isolation sum
 ```
 
 The router **never** takes your key as an argument, prints it, or writes it to a
-transcript — pipe secrets straight into `codex` as shown, so they never touch the router.
+transcript. Pipe secrets straight into `codex` as shown, so they never touch the router.
 Your auth method affects which admin controls, data retention, residency, RBAC, and billing
-apply — that is between you and OpenAI; the router only pins *which* identity is active.
+apply. That is between you and OpenAI; the router only pins *which* identity is active.
 
 ## Gotchas the router protects against
 
 - **Never clone `auth.json` between roots.** Refresh tokens are single-use; a copied file
-  goes stale and silently breaks. `ai doctor` fingerprints both files and warns if they
-  are identical. To seed a second account, run a fresh `login` — do **not** `cp`.
+  goes stale and breaks with no warning. `ai doctor` fingerprints both files and warns if
+  they are identical. To seed a second account, run a fresh `login`; do **not** `cp`.
 - **CLI and IDE extension share cached login.** Logging out from one can force a re-login
   in the other next time. This is expected OpenAI behavior, not a router bug.
 - **`--profile` is a config profile, not an account.** `codex --profile foo` selects a
@@ -110,5 +110,5 @@ Deliberately out of scope, to keep the router correct and credential-safe:
 - **Managing the OS keyring.** If you choose keyring mode, isolation guarantees are the
   OS's; the router reports the limitation rather than papering over it.
 - **Codex cloud / Remote Control provisioning.** Codex cloud requires ChatGPT sign-in and
-  a signed-in host; the router pins local identity only and does not orchestrate remote
+  a signed-in host. The router pins local identity only and does not orchestrate remote
   hosts (see [ORCHESTRATION-PLAN.md](ORCHESTRATION-PLAN.md) for that future work).

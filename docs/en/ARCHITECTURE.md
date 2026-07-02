@@ -5,13 +5,13 @@
 ## 1. Problem
 
 One machine, one user, two AI identities (personal accounts/projects vs work
-accounts/repos). CLI AI tools default to a single global state dir, which causes
-cross-contamination: wrong billing, mixed chat history, wrong MCP tokens, logs in the
+accounts/repos). CLI AI tools default to a single global state dir, which cross-contaminates
+everything: wrong billing, mixed chat history, wrong MCP tokens, logs in the
 wrong tree. `ai` makes the identity choice explicit and repeatable.
 
 ## 2. Core idea — orthogonal axes
 
-A "session" is decomposed into independent axes that combine freely:
+A "session" breaks into independent axes that combine freely:
 
 | Axis          | Decides                       | Mechanism                                   |
 |---------------|-------------------------------|---------------------------------------------|
@@ -21,13 +21,13 @@ A "session" is decomposed into independent axes that combine freely:
 | **Tailscale** | remote entry (report only)    | `ai remote doctor`                          |
 
 Changing one axis never affects the others. `ai codex company --account personal` =
-"personal account, company workspace, company-located logs" — one line here, a footgun
+"personal account, company workspace, company-located logs." One line here, a footgun
 elsewhere.
 
 ## 3. The mechanism
 
-CLI AI tools resolve all state from one root dir via an env var. So the heart of the
-router is three lines:
+CLI AI tools resolve all state from one root dir via an env var. So the router comes down to
+three lines:
 
 ```zsh
 export CODEX_HOME="$HOME/.codex-$account"   # account = which folder
@@ -56,14 +56,14 @@ never moved; seed new roots by cloning or by a fresh login.
 
 ### Browser isolation (`ai gui`)
 
-The GUI path reuses the exact isolation trick the Claude desktop app already relies on.
+The GUI path reuses the isolation trick the Claude desktop app already relies on.
 Chromium-based apps and browsers accept `--user-data-dir=<path>`, which spins up an
-**isolated instance with its own storage and auto-creates the directory** — no
+**isolated instance with its own storage and auto-creates the directory**, no
 pre-existing profile required. The desktop app passes `--user-data-dir=~/.claude-app-<account>`;
-the browser path is the same idea generalized to any Chromium browser (Edge, Chrome,
+the browser path generalizes the same idea to any Chromium browser (Edge, Chrome,
 Brave, Arc, Chromium):
 
-> One identity = one isolated browser instance. Nothing is forced — no required browser,
+> One identity = one isolated browser instance. Nothing is forced: no required browser,
 > no pre-created profile, no interactive prompt on every launch.
 
 Two mechanisms, resolved per identity:
@@ -75,7 +75,7 @@ Two mechanisms, resolved per identity:
 
 The default forces nothing. Signing into the browser account inside a fresh data-dir
 triggers **Chromium sync**, so bookmarks/extensions/passwords/history populate after a
-one-time login — equivalent to a profile without pre-creating one. The user's everyday
+one-time login, matching a profile without pre-creating one. The user's everyday
 browser (launched by clicking its icon → the *default* data-dir) is never touched.
 
 Resolution per identity `<id>`: browser = `AI_GUI_BROWSER_<id>` → `AI_BROWSER` → first
@@ -102,22 +102,22 @@ launches stay non-interactive.
 - **Claude auth on macOS** lives in the Keychain, not under `CLAUDE_CONFIG_DIR`. It
   *is* isolated per account, but via an **undocumented, version-dependent** service
   name `Claude Code-credentials-<sha256(config-dir)[:8]>` (verified on Claude Code
-  v2.1.198 — the public docs still describe a single shared entry). `ai doctor`
-  therefore **verifies** the entry exists (presence only, never the secret) rather
+  v2.1.198; the public docs still describe a single shared entry). So `ai doctor`
+  **verifies** the entry exists (presence only, never the secret) rather
   than assuming, and flags it as re-verify-after-upgrade. Two "fixes" are macOS
-  dead-ends and deliberately not attempted: forcing file-based `.credentials.json`
+  dead-ends and left alone on purpose: forcing file-based `.credentials.json`
   (no supported switch) and per-account `CLAUDE_CODE_OAUTH_TOKEN` (triggers issue
-  \#37512, which deletes the shared Keychain entry on exit). Codex has no such
-  issue — `auth.json` is a plain file under `CODEX_HOME`.
+  \#37512, which deletes the shared Keychain entry on exit). Codex avoids this:
+  `auth.json` is a plain file under `CODEX_HOME`.
 - **Version drift**: tools auto-update; the wrapper hardcodes no versions. The macOS
-  Keychain hash above is the one place this can bite — hence the doctor verification.
+  Keychain hash above is the one place this can bite, which is why the doctor verifies it.
 
 ## 6. MCP — deliberately out of scope (v1)
 
 Claude (JSON) and Codex (TOML) use different MCP config formats, and per-account tokens
 must live in each config root anyway. So MCP is **not** a core feature. The
 `share/mcp/` placeholders exist only as an optional, documented extension point. Wire
-MCP into each account's own config root manually.
+MCP into each account's config root by hand.
 
 ## 7. Data flow
 

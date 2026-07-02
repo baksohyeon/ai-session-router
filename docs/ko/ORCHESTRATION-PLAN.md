@@ -18,7 +18,7 @@
 | **workspace** | personal · company 트리 | ✅ `cd` + 로그 | 변경 없음; worktree 추가 |
 | **agents** | 1 → N 병렬 (+ 서브에이전트) | 없음 | 네이티브 fleet + 오케스트레이터 (§2, §5) |
 
-라우터의 v1 명제(세션 = 직교하는 축들, 각 축을 env var로 고정)는 **1차 자료로 검증됐다**. 이 계획은 그 코어를 건드리지 않고 세 축 — *fleet*, *cross-tool*, *machine-as-target* — 을 더한다.
+라우터의 v1 명제(세션 = 직교하는 축들, 각 축을 env var로 고정)는 **1차 자료로 검증됐다**. 이 계획은 그 코어를 그대로 두고 세 축 — *fleet*, *cross-tool*, *machine-as-target* — 을 얹는다.
 
 ## 1. v1을 작성한 이후 달라진 것 (지렛대)
 
@@ -71,7 +71,7 @@
 - 상호 오케스트레이션은 옵트인: `ai claude … --mcp-config <codex-mcp-server.json>`.
 
 ### Phase B — MCP 메시 컨트롤 플레인 (중간)
-각 머신이 계정별 런타임(Claude Agent SDK / Codex-via-Agents-SDK)을 돌리고, 이 런타임은 MCP를 소비하는 동시에 노출한다(`codex mcp-server`, `claude-code-mcp`). 얇은 브로커(tailnet 위의 SQLite 큐 / NATS / Redis)가 task 봉투를 `machine × tool × account`로 라우팅한다. `ai`는 각 노드를 알맞은 `CLAUDE_CONFIG_DIR` / `CODEX_HOME` / 토큰으로 띄우는 **부트스트래퍼**가 된다. 재시도/중복 제거는 직접 책임진다.
+각 머신이 계정별 런타임(Claude Agent SDK / Codex-via-Agents-SDK)을 돌리고, 이 런타임은 MCP를 소비하는 동시에 노출한다(`codex mcp-server`, `claude-code-mcp`). 얇은 브로커(tailnet 위의 SQLite 큐 / NATS / Redis)가 task 봉투를 `machine × tool × account`로 라우팅한다. `ai`는 각 노드를 알맞은 `CLAUDE_CONFIG_DIR` / `CODEX_HOME` / 토큰으로 띄우는 **부트스트래퍼**가 된다. 재시도와 중복 제거는 직접 챙겨야 한다.
 
 ### Phase C — 내구성 있는 컨트롤 플레인 (가장 무거움; 신뢰성이 요구할 때만)
 노드 런타임은 B와 같지만, 밑에 **Temporal**을 깔아 크래시에 강하고 재개 가능한 장시간 원격 잡을 돌린다(머신별 워커가 원격+로컬 토폴로지에 매핑됨). "노트북이 잠들어도 잡이 살아남았다"가 반드시 필요할 때만 채택한다.

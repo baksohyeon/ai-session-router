@@ -36,7 +36,7 @@ ai resolve <claude|codex> <ws> [--account p|c]             # DRY-RUN preview (no
     existing profile's logins/bookmarks via `--profile-directory=<name>`.
 
   Your everyday browser (opened by clicking its icon = the default data-dir) is never
-  touched; `ai gui` always launches a separate isolated instance. If no browser resolves,
+  touched; `ai gui` launches a separate isolated instance. If no browser resolves,
   it falls back to the OS default browser opening the URLs and hints to run `ai gui setup`.
 - **`ai gui setup [--print]`** is a one-time helper: it detects installed Chromium
   browsers (Edge, Chrome, Brave, Arc, Chromium), lists their existing profiles, prompts

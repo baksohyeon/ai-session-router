@@ -2,10 +2,10 @@
 
 **Language:** English · [한국어](../ko/PORTABILITY.md)
 
-The router is designed to run regardless of environment. The **core** (env-var
-redirection, workspace selection, logging, doctor/resolve) is OS-agnostic. Only a few
-surfaces are inherently platform-specific; those are isolated behind helper functions
-so adding an OS is a one-spot change.
+The router runs regardless of environment. The **core** (env-var
+redirection, workspace selection, logging, doctor/resolve) is OS-agnostic. A few
+surfaces are platform-specific; helper functions isolate those, so adding an OS is a
+one-spot change.
 
 ## Support matrix
 
@@ -57,8 +57,8 @@ AI_CHROME_COMPANY_PROFILE="Acme Work"
 
 ## Not yet portable
 
-- The **browser GUI** is inherently desktop-OS-specific; headless/server hosts will
-  warn and no-op for `ai gui`. That's expected.
+- The **browser GUI** is desktop-OS-specific; headless/server hosts warn and
+  no-op for `ai gui`. That's expected.
 - Windows is out of scope (use WSL, which presents as Linux).
 
 ## Testing portability
