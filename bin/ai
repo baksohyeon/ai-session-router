@@ -36,6 +36,9 @@ esac
 : "${AI_CLAUDE_APP:=/Applications/Claude.app}"
 : "${AI_CLAUDE_APP_DATA_PREFIX:=$HOME/.claude-app-}"
 : "${AI_GUI_APPS:=claude}"
+# Last Claude Code version where the per-dir keychain scheme sha256(abs dir)[:8]
+# was confirmed. doctor soft-warns when the installed version drifts from this.
+: "${AI_CLAUDE_KC_VERIFIED_VER:=2.1.198}"
 
 _cfg="${XDG_CONFIG_HOME:-$HOME/.config}/ai-session-router/router.env"
 [[ -f "$_cfg" ]] && source "$_cfg"
@@ -435,6 +438,17 @@ cmd_doctor() {
       print -r -- "  claude/$acct: no creds file yet (login: ai claude $acct then /login)"
     fi
   done
+  # Upgrade guard: compare installed Claude Code version to the keychain-verified one.
+  if command -v claude >/dev/null 2>&1; then
+    local cver; cver="$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
+    if [[ -n "$cver" ]]; then
+      if [[ "$cver" == "$AI_CLAUDE_KC_VERIFIED_VER" ]]; then
+        print -r -- "  keychain hash scheme: verified for Claude Code $cver ✓"
+      else
+        print -r -- "  note: Claude Code $cver differs from keychain-scheme-verified $AI_CLAUDE_KC_VERIFIED_VER — if any account above shows 'no isolated keychain entry' despite being logged in, the per-dir hash scheme may have changed; re-verify with: ai keychain list"
+      fi
+    fi
+  fi
   # Codex auth mode per account — presence + declared store, never token contents.
   local ca cxroot store authf mode
   for ca in personal company; do
@@ -515,6 +529,103 @@ cmd_logs() {
   done
 }
 
+# Build the "keep set" — hashes of config dirs that must NEVER be pruned. Maps
+# hash -> dir for existing dirs so list can name an active entry's owner. The bare
+# ~/.claude entry is kept unconditionally (handled by caller, not hashed here).
+# $@ = extra --keep dirs to whitelist. Populates the assoc array named _keep_map.
+_keychain_build_keep() {  # $@ extra keep dirs -> fills the caller-scoped _keep_map assoc array
+  setopt local_options null_glob
+  local -a candidates=("$HOME/.claude" "${AI_CLAUDE_ROOT_PREFIX}"*(N) \
+                       "$(cfg_root claude personal)" "$(cfg_root claude company)" "$@")
+  local dir h
+  for dir in "${candidates[@]}"; do
+    [[ -n "$dir" && -d "$dir" ]] || continue           # only dirs that actually exist
+    [[ "$dir:A" == "$HOME/.claude:A" ]] && continue     # bare entry: kept, not hashed
+    h="$(claude_keychain_hash "$dir")"
+    [[ -n "$h" ]] && _keep_map[$h]="$dir"
+  done
+}
+
+cmd_keychain() {  # <list|prune> [--force] [--keep DIR ...]
+  setopt local_options extended_glob   # needed for the (#b) backreference match below
+  local sub="" force=0; local -a keep_dirs=()
+  while (( $# )); do
+    case "$1" in
+      --force) force=1; shift ;;
+      --keep)  keep_dirs+=("${2:-}"); shift 2 ;;
+      list|prune) [[ -z "$sub" ]] && sub="$1" || { print -r -- "usage: ai keychain <list|prune> [--force] [--keep DIR ...]" >&2; return 2; }; shift ;;
+      *) print -r -- "usage: ai keychain <list|prune> [--force] [--keep DIR ...]" >&2; return 2 ;;
+    esac
+  done
+  [[ -n "$sub" ]] || { print -r -- "usage: ai keychain <list|prune> [--force] [--keep DIR ...]" >&2; return 2; }
+
+  # macOS-only; both actions no-op cleanly elsewhere.
+  if [[ "$AI_OS" != macos ]]; then
+    print -r -- "ai keychain: not applicable on this OS (macOS Keychain only)."; return 0
+  fi
+  command -v security >/dev/null 2>&1 || { print -r -- "ai keychain: 'security' tool unavailable; nothing to do."; return 0; }
+  command -v shasum   >/dev/null 2>&1 || { print -r -- "ai keychain: 'shasum' unavailable; cannot classify entries."; return 0; }
+
+  # Keep set: hash -> owning dir. Bare ~/.claude is always kept separately.
+  local -A _keep_map=()
+  _keychain_build_keep "${keep_dirs[@]}"
+
+  # Enumerate matching services from ATTRIBUTES ONLY (never -w / secret values).
+  local -a services=()
+  services=("${(@f)$(security dump-keychain 2>/dev/null | grep -aoE 'Claude Code-credentials(-[0-9a-f]+)?' | sort -u)}")
+
+  local svc suffix nactive=0 norphan=0 nbare=0
+  local -a orphans=()
+  for svc in "${services[@]}"; do
+    [[ -n "$svc" ]] || continue
+    if [[ "$svc" == "Claude Code-credentials" ]]; then
+      (( nbare++ ))
+      [[ "$sub" == list ]] && print -r -- "  $svc  ->  default (~/.claude)"
+    elif [[ "$svc" == (#b)"Claude Code-credentials-"([0-9a-f]##) ]]; then
+      suffix="$match[1]"
+      if [[ -n "${_keep_map[$suffix]:-}" ]]; then
+        (( nactive++ ))
+        [[ "$sub" == list ]] && print -r -- "  $svc  ->  active: ${_keep_map[$suffix]}"
+      else
+        (( norphan++ )); orphans+=("$svc")
+        [[ "$sub" == list ]] && print -r -- "  $svc  ->  orphan (no matching config dir)"
+      fi
+    fi
+    # Anything not matching the exact patterns above is ignored — never touched.
+  done
+
+  if [[ "$sub" == list ]]; then
+    print -r -- "summary: $nactive active, $norphan orphan, $nbare default"
+    return 0
+  fi
+
+  # prune: dry-run unless --force. Only ORPHAN entries are ever eligible.
+  local kept=$(( nactive + nbare ))
+  if (( norphan == 0 )); then
+    print -r -- "no orphaned Claude keychain entries found ✓"
+    print -r -- "kept $kept entries ($nactive active + $nbare default)."
+    return 0
+  fi
+  local o
+  if (( force )); then
+    for o in "${orphans[@]}"; do
+      print -r -- "deleting: $o"
+      if security delete-generic-password -s "$o" >/dev/null 2>&1; then
+        print -r -- "  ok"
+      else
+        warn "failed to delete: $o"
+      fi
+    done
+  else
+    for o in "${orphans[@]}"; do
+      print -r -- "would delete: $o"
+    done
+    print -r -- "re-run with --force to delete $norphan orphaned entries"
+  fi
+  print -r -- "kept $kept entries ($nactive active + $nbare default)."
+  return 0
+}
+
 usage() {
   cat <<'EOF'
 ai — AI session router
@@ -524,6 +635,7 @@ ai — AI session router
   ai claude  <personal|company> [--account personal|company] [-- args...]
   ai codex   <personal|company> [--account personal|company] [-- args...]
   ai tmux    <personal|company>
+  ai keychain <list|prune> [--force] [--keep DIR ...]   (prune is dry-run unless --force)
   ai doctor
   ai remote doctor
   ai logs
@@ -542,6 +654,7 @@ main() {
     claude)  run_tool claude "$@" ;;
     codex)   run_tool codex "$@" ;;
     tmux)    cmd_tmux "$@" ;;
+    keychain) cmd_keychain "$@" ;;
     doctor)  cmd_doctor ;;
     remote)  [[ "${1:-}" == doctor ]] && cmd_remote_doctor || { print -r -- "usage: ai remote doctor" >&2; return 2; } ;;
     logs)    cmd_logs ;;
