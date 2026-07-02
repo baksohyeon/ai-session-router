@@ -1,7 +1,7 @@
 # How it works
 
 A plain-English explanation of what `ai` actually does under the hood. If
-[ARCHITECTURE.md](../ARCHITECTURE.md) felt too abstract, start here.
+[ARCHITECTURE.md](ARCHITECTURE.md) felt too abstract, start here.
 
 ## The one idea
 

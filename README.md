@@ -34,7 +34,7 @@ Claude Code and Codex resolve **all** their state — tokens, sessions, config, 
 from a single directory pointed to by an env var (`CLAUDE_CONFIG_DIR` / `CODEX_HOME`).
 "Switching accounts" is just pointing that var at a different folder before launching.
 `ai` wraps that with default rules, guardrails, logging, and per-OS browser/tmux
-helpers. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+helpers. See [docs/en/ARCHITECTURE.md](docs/en/ARCHITECTURE.md).
 
 ## Quick start
 
@@ -47,7 +47,7 @@ ai doctor              # verify
 
 Then log in once per account, e.g. `ai codex company -- login` → Codex login flow.
 For OpenAI/Codex specifics — auth modes, API-key profiles, and why ChatGPT web account
-switching is **not** Codex account switching — see [docs/CODEX-AUTH.md](docs/CODEX-AUTH.md).
+switching is **not** Codex account switching — see [docs/en/CODEX-AUTH.md](docs/en/CODEX-AUTH.md).
 
 ## Configuration
 
@@ -64,7 +64,7 @@ mappings for you.
 
 ## Commands
 
-Full reference: [docs/COMMANDS.md](docs/COMMANDS.md). Summary:
+Full reference: [docs/en/COMMANDS.md](docs/en/COMMANDS.md). Summary:
 
 ```
 ai gui|shell|tmux   <personal|company>
@@ -78,14 +78,14 @@ ai doctor | ai remote doctor | ai logs
 
 zsh required. macOS is fully tested. Linux paths (xdg-open, util-linux `script`,
 `ss`-based checks) are provided and smoke-tested. See
-[docs/PORTABILITY.md](docs/PORTABILITY.md) for the support matrix.
+[docs/en/PORTABILITY.md](docs/en/PORTABILITY.md) for the support matrix.
 
 ## Remote access
 
 Running `ai` on one machine and attaching from your phone, another laptop, or anywhere
 else — without losing the session when the network drops or the lid closes — is
-covered in [docs/REMOTE-ACCESS.md](docs/REMOTE-ACCESS.md)
-([한국어](docs/REMOTE-ACCESS-ko.md)). Network fundamentals through Tailscale, SSH,
+covered in [docs/en/REMOTE-ACCESS.md](docs/en/REMOTE-ACCESS.md)
+([한국어](docs/ko/REMOTE-ACCESS.md)). Network fundamentals through Tailscale, SSH,
 tmux, sleep control, mobile clients, and end-to-end workflows.
 
 ## Security
@@ -96,7 +96,7 @@ own config root. The router only ever reads filenames (never contents) when warn
 about secret-looking files near a workspace. `ai doctor` inspects Codex `auth.json` only
 by *presence*, file *mode*, and a non-reversible *fingerprint* — never its contents — and
 warns on loose permissions or a cloned (stale-token) copy. Codex auth details:
-[docs/CODEX-AUTH.md](docs/CODEX-AUTH.md).
+[docs/en/CODEX-AUTH.md](docs/en/CODEX-AUTH.md).
 
 ## License
 

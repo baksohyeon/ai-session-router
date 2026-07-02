@@ -8,10 +8,10 @@
 #   Tailscale -> remote entry only       (reported, never configured here)
 #
 # Configuration is read from ~/.config/ai-session-router/router.env if present,
-# otherwise sensible defaults are used. See docs/PORTABILITY.md.
+# otherwise sensible defaults are used. See docs/en/PORTABILITY.md.
 #
 # Dependency: zsh (uses arrays, setopt, ${x:t}). Tested on macOS; Linux paths
-# are provided but only smoke-tested. See docs/PORTABILITY.md for the support matrix.
+# are provided but only smoke-tested. See docs/en/PORTABILITY.md for the support matrix.
 
 emulate -L zsh
 set -u

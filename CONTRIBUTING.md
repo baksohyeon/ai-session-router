@@ -31,7 +31,7 @@ sh  -n install.sh                     # must pass
 ./bin/ai doctor                       # OS detection smoke
 ```
 
-If you change behavior, update `docs/COMMANDS.md` and `CHANGELOG.md`.
+If you change behavior, update `docs/en/COMMANDS.md` and `CHANGELOG.md`.
 
 ## Commit style
 
