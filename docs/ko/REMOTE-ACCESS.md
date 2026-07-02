@@ -1,6 +1,6 @@
 # 원격 접속 완전 가이드 (한국어판)
 
-> English version: [REMOTE-ACCESS.md](../en/REMOTE-ACCESS.md)
+**Language:** [English](../en/REMOTE-ACCESS.md) · 한국어
 
 한 컴퓨터에서 AI CLI 세션을 띄워놓고, 다른 노트북·기차에서 휴대폰·호텔 Wi-Fi 등
 어디서든 그 세션에 붙는 법. 네트워크가 끊겨도, 노트북 덮개를 닫아도 세션이 살아있게.

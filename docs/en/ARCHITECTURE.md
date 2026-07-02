@@ -1,5 +1,7 @@
 # Architecture
 
+**Language:** English · [한국어](../ko/ARCHITECTURE.md)
+
 ## 1. Problem
 
 One machine, one user, two AI identities (personal accounts/projects vs work

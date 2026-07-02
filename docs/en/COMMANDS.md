@@ -1,5 +1,7 @@
 # Command reference
 
+**Language:** English · [한국어](../ko/COMMANDS.md)
+
 ```
 ai gui     <personal|company> [--browser] [--dry-run]      # native Claude app, else isolated browser instance
 ai gui     setup [--print]                                 # detect browsers, map identities → router.env

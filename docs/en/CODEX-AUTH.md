@@ -1,5 +1,7 @@
 # Codex accounts & auth (OpenAI)
 
+**Language:** English · [한국어](../ko/CODEX-AUTH.md)
+
 How the router keeps two OpenAI Codex identities (`personal`, `company`) separate, how
 to log into each, and what OpenAI's account model does — and does **not** — do for you.
 

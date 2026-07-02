@@ -1,5 +1,7 @@
 # Portability & OS support
 
+**Language:** English · [한국어](../ko/PORTABILITY.md)
+
 The router is designed to run regardless of environment. The **core** (env-var
 redirection, workspace selection, logging, doctor/resolve) is OS-agnostic. Only a few
 surfaces are inherently platform-specific; those are isolated behind helper functions

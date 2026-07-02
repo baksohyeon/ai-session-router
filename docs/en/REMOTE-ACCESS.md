@@ -1,6 +1,6 @@
 # Remote access — the complete guide
 
-> Korean version: [REMOTE-ACCESS-ko.md](../ko/REMOTE-ACCESS.md)
+**Language:** English · [한국어](../ko/REMOTE-ACCESS.md)
 
 How to run AI CLI sessions on one machine and reach them from anywhere — your other
 laptop, your phone on the train, a hotel Wi-Fi — without losing the session when the

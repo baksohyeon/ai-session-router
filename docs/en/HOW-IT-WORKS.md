@@ -1,5 +1,7 @@
 # How it works
 
+**Language:** English · [한국어](../ko/HOW-IT-WORKS.md)
+
 A plain-English explanation of what `ai` actually does under the hood. If
 [ARCHITECTURE.md](ARCHITECTURE.md) felt too abstract, start here.
 

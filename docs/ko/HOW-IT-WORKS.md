@@ -1,5 +1,7 @@
 # 원리 설명
 
+**Language:** [English](../en/HOW-IT-WORKS.md) · 한국어
+
 `ai`가 속으로 실제 뭘 하는지 쉬운 말로 풀었다. [ARCHITECTURE.md](../en/ARCHITECTURE.md)가
 너무 추상적이었다면 여기부터 보면 된다.
 
