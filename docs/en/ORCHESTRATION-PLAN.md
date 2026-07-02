@@ -1,4 +1,4 @@
-# Orchestration Plan — multi-machine · multi-account · multi-agent (draft)
+# Orchestration Plan: multi-machine · multi-account · multi-agent (draft)
 
 **Language:** English · [한국어](../ko/ORCHESTRATION-PLAN.md)
 
@@ -61,19 +61,19 @@ The router's most-used guarantee, account isolation, holds on macOS. The mechani
 - **Codex:** already fully isolated by `CODEX_HOME`. One rule to encode: **never clone `auth.json` between roots** (refresh tokens are single-use; the copy goes stale). `ai doctor` should warn if two roots share an `auth.json` fingerprint.
 - **What shipped, `ai doctor` verification (not assumption):** for each Claude account it computes `sha256(config-dir)[:8]`, runs `security find-generic-password -s "Claude Code-credentials-<hash>"` for **presence only** (never reads the secret), and reports `isolated ✓` or `not logged in`, flagging the mechanism as version-dependent. It also **warns** when `CLAUDE_CODE_OAUTH_TOKEN` (#37512) or `ANTHROPIC_API_KEY` (billing precedence) are set in the environment, and warns on a cloned Codex `auth.json`. This prevents a repeat of the "which account is even active?" confusion.
 
-## 5. Target architecture — phased
+## 5. Target architecture: phased
 
-### Phase A — Router-as-launcher + native fleet (recommended near-term, thinnest)
+### Phase A: Router-as-launcher + native fleet (recommended near-term, thinnest)
 Keep `ai` as the env-var/guardrail launcher. Add verbs that shell into Claude Code's native fleet, one pane per account×workspace:
 - `ai fleet <ws> [--account X] [-n N]` → `claude agents` / `--bg` + tmuxp layout.
 - `ai worktree <ws> <branch>` → `claude -w` in an isolated worktree.
 - Remote stays Tailscale SSH + tmux (documented). No new daemon.
 - Cross-orchestration opt-in: `ai claude … --mcp-config <codex-mcp-server.json>`.
 
-### Phase B — MCP mesh control plane (medium)
+### Phase B: MCP mesh control plane (medium)
 Each machine runs a per-account runtime (Claude Agent SDK / Codex-via-Agents-SDK) that both consumes and exposes MCP (`codex mcp-server`, `claude-code-mcp`). A thin broker (SQLite queue / NATS / Redis over the tailnet) routes task envelopes to `machine × tool × account`. `ai` becomes the **bootstrapper** that launches each node with the right `CLAUDE_CONFIG_DIR` / `CODEX_HOME` / token. You own retries/dedup.
 
-### Phase C — Durable control plane (heaviest; only if reliability demands it)
+### Phase C: Durable control plane (heaviest; only if reliability demands it)
 Same node runtimes as B, but **Temporal** underneath for crash-proof, resumable long-running remote jobs (worker-per-machine maps onto remote+local topology). Adopt only when "the job survived my laptop sleeping" is a hard requirement.
 
 **Recommendation:** ship **A** now (low risk, immediate value, reuses native primitives), spike **B** as an `ai orchestrate` prototype driving one Codex worker from one Claude orchestrator across two accounts, and defer **C** until a real durability need appears.

@@ -26,12 +26,12 @@ OS를 하나 추가할 때 한 곳만 고치면 되게 했다.
 
 OS 분기는 스크립트 상단의 헬퍼 몇 개에 모여 있다:
 
-- `AI_OS` — `uname -s`로 한 번만 설정 (`macos` / `linux` / `other`).
-- `_open_url` — `open`(macOS) 대 `xdg-open`(Linux).
-- `_has_browser` / `_launch_edge` / `_launch_chrome_profile` — 앱 감지 + 실행.
-- `_os_label` — `sw_vers` 대 `/etc/os-release` 대 `uname`.
-- `_sshd_listening` — `lsof` 먼저, 안 되면 `ss`로 폴백.
-- `_run_with_transcript` — BSD 대 util-linux `script(1)` 문법.
+- `AI_OS`: `uname -s`로 한 번만 설정 (`macos` / `linux` / `other`).
+- `_open_url`: `open`(macOS) 대 `xdg-open`(Linux).
+- `_has_browser` / `_launch_edge` / `_launch_chrome_profile`: 앱 감지 + 실행.
+- `_os_label`: `sw_vers` 대 `/etc/os-release` 대 `uname`.
+- `_sshd_listening`: `lsof` 먼저, 안 되면 `ss`로 폴백.
+- `_run_with_transcript`: BSD 대 util-linux `script(1)` 문법.
 
 새 OS(예: WSL, BSD)를 추가하려면 이 헬퍼들만 손보면 된다.
 

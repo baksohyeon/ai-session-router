@@ -9,7 +9,7 @@ accounts/repos). CLI AI tools default to a single global state dir, which cross-
 everything: wrong billing, mixed chat history, wrong MCP tokens, logs in the
 wrong tree. `ai` makes the identity choice explicit and repeatable.
 
-## 2. Core idea — orthogonal axes
+## 2. Core idea: orthogonal axes
 
 A "session" breaks into independent axes that combine freely:
 
@@ -112,7 +112,7 @@ launches stay non-interactive.
 - **Version drift**: tools auto-update; the wrapper hardcodes no versions. The macOS
   Keychain hash above is the one place this can bite, which is why the doctor verifies it.
 
-## 6. MCP — deliberately out of scope (v1)
+## 6. MCP: deliberately out of scope (v1)
 
 Claude (JSON) and Codex (TOML) use different MCP config formats, and per-account tokens
 must live in each config root anyway. So MCP is **not** a core feature. The

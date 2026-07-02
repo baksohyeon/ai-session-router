@@ -3,7 +3,7 @@
 **Language:** English · [한국어](../ko/CODEX-AUTH.md)
 
 How the router keeps two OpenAI Codex identities (`personal`, `company`) separate, how
-to log into each, and what OpenAI's account model does — and does **not** — do for you.
+to log into each, and what OpenAI's account model does (and does **not**) do for you.
 
 > Facts below track OpenAI's public docs as of **2026-07-02**. Both the Codex CLI and
 > the desktop app auto-update; treat exact flags as *verify-at-invocation*.
@@ -18,7 +18,7 @@ to log into each, and what OpenAI's account model does — and does **not** — 
 
 - ChatGPT **web** lets you keep up to **2** accounts active and toggle between them; chats,
   memory, billing, and workspaces stay separate per account.
-- OpenAI states this is **web-only** — it is **not** supported in the Codex desktop app or
+- OpenAI states this is **web-only**. It is **not** supported in the Codex desktop app or
   the native ChatGPT mobile app.
 
 Switching accounts in your browser does nothing for Codex. Codex resolves its identity
@@ -43,8 +43,8 @@ for you; it only **reports** what each root uses (`ai doctor`) and never reads t
 
 | Mode | Where creds live | How to select | Router isolation |
 |------|------------------|---------------|------------------|
-| **File** (default) | `$CODEX_HOME/auth.json` (plaintext — treat like a password) | default, or `cli_auth_credentials_store = "file"` in `config.toml` | **Full** — each account's `auth.json` is under its own root |
-| **Keyring** | OS credential store | `cli_auth_credentials_store = "keyring"` | Partial — `CODEX_HOME` isolates config/history, but the OS keyring entry **may be shared**; confirm the active account with `ai codex <acct> -- login status` |
+| **File** (default) | `$CODEX_HOME/auth.json` (plaintext, treat like a password) | default, or `cli_auth_credentials_store = "file"` in `config.toml` | **Full**: each account's `auth.json` is under its own root |
+| **Keyring** | OS credential store | `cli_auth_credentials_store = "keyring"` | Partial: `CODEX_HOME` isolates config/history, but the OS keyring entry **may be shared**; confirm the active account with `ai codex <acct> -- login status` |
 | **API key** | `auth.json` (from `--with-api-key`) | see below | Full (file-backed) |
 | **Auto** | file or keyring, tool's choice | `cli_auth_credentials_store = "auto"` | Treated as file if `auth.json` appears, else as keyring |
 

@@ -46,8 +46,8 @@ Codex는 로그인 정보를 로컬에 캐시하며 자격 증명을 세 가지 
 
 | 방식 | 자격 증명이 저장되는 곳 | 선택 방법 | 라우터 격리 수준 |
 |------|------------------|---------------|------------------|
-| **File** (기본) | `$CODEX_HOME/auth.json` (평문 — 비밀번호처럼 다뤄라) | 기본값, 또는 `config.toml`에 `cli_auth_credentials_store = "file"` | **완전** — 계정마다 `auth.json`이 각자의 루트 아래에 있다 |
-| **Keyring** | OS 자격 증명 저장소 | `cli_auth_credentials_store = "keyring"` | 부분 — `CODEX_HOME`이 설정과 히스토리는 격리하지만 OS 키링 항목은 **공유될 수 있다**. 활성 계정은 `ai codex <acct> -- login status`로 확인하라 |
+| **File** (기본) | `$CODEX_HOME/auth.json` (평문이니 비밀번호처럼 다뤄라) | 기본값, 또는 `config.toml`에 `cli_auth_credentials_store = "file"` | **완전**: 계정마다 `auth.json`이 각자의 루트 아래에 있다 |
+| **Keyring** | OS 자격 증명 저장소 | `cli_auth_credentials_store = "keyring"` | 부분: `CODEX_HOME`이 설정과 히스토리는 격리하지만 OS 키링 항목은 **공유될 수 있다**. 활성 계정은 `ai codex <acct> -- login status`로 확인하라 |
 | **API key** | `auth.json` (`--with-api-key`로 저장) | 아래 참고 | 완전 (파일 기반) |
 | **Auto** | 파일 또는 키링, 도구가 선택 | `cli_auth_credentials_store = "auto"` | `auth.json`이 있으면 파일로, 없으면 키링으로 취급 |
 

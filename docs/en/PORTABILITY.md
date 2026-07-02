@@ -26,12 +26,12 @@ installed; not verified on a real Linux desktop yet.
 
 All OS branching lives in a handful of helpers near the top of the script:
 
-- `AI_OS` — set once from `uname -s` (`macos` / `linux` / `other`).
-- `_open_url` — `open` (macOS) vs `xdg-open` (Linux).
-- `_has_browser` / `_launch_edge` / `_launch_chrome_profile` — app detection + launch.
-- `_os_label` — `sw_vers` vs `/etc/os-release` vs `uname`.
-- `_sshd_listening` — `lsof` then `ss` fallback.
-- `_run_with_transcript` — BSD vs util-linux `script(1)` syntax.
+- `AI_OS`: set once from `uname -s` (`macos` / `linux` / `other`).
+- `_open_url`: `open` (macOS) vs `xdg-open` (Linux).
+- `_has_browser` / `_launch_edge` / `_launch_chrome_profile`: app detection + launch.
+- `_os_label`: `sw_vers` vs `/etc/os-release` vs `uname`.
+- `_sshd_listening`: `lsof` then `ss` fallback.
+- `_run_with_transcript`: BSD vs util-linux `script(1)` syntax.
 
 To add a new OS (e.g. WSL, BSD), extend these helpers only.
 
