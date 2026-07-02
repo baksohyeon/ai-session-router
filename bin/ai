@@ -29,7 +29,16 @@ esac
 : "${AI_COMPANY_WS:=$HOME/dev/work}"
 : "${AI_CLAUDE_ROOT_PREFIX:=$HOME/.claude-}"   # + <account>
 : "${AI_CODEX_ROOT_PREFIX:=$HOME/.codex-}"     # + <account>
-: "${AI_CHROME_COMPANY_PROFILE:=Work}"
+# Generic browser isolation (see docs/superpowers/specs/…-generic-browser-isolation-design.md).
+# AI_BROWSER: default browser for isolated GUI launches (macOS app name / linux binary).
+#   Empty → auto-detect first available Chromium browser; else OS default browser.
+# AI_BROWSER_DATA_PREFIX: prefix for per-identity isolated user-data dirs; router appends <id>.
+: "${AI_BROWSER:=Microsoft Edge}"
+: "${AI_BROWSER_DATA_PREFIX:=$HOME/.ai-browser-}"
+# Legacy vars — honored as fallbacks for pre-generic configs. AI_CHROME_COMPANY_PROFILE
+# defaults EMPTY: a fresh install (no legacy var) uses the isolated-data-dir default,
+# while an existing config that set it keeps company on Chrome + that profile.
+: "${AI_CHROME_COMPANY_PROFILE:=}"
 : "${AI_COMPANY_CHATGPT_URL:=https://chatgpt.com/}"
 : "${AI_COMPANY_CLAUDE_URL:=https://claude.ai/}"
 : "${AI_SHARED:=$HOME/.ai-shared}"
@@ -131,42 +140,158 @@ _open_url() {  # open one or more URLs in the default browser
   esac
 }
 
-_has_browser() {  # $1 = edge|chrome
+# ---------- Chromium browser registry ----------
+# Known Chromium-family browsers. Each entry maps a canonical key to its macOS app
+# name, candidate linux binaries, and the "Local State" JSON dir (relative to $HOME,
+# used by `ai gui setup` to enumerate existing profiles).
+_CHROMIUM_KEYS=(edge chrome brave arc chromium)
+
+_browser_macos_app() {  # $1 key -> macOS app name
+  case "$1" in
+    edge)     print -r -- "Microsoft Edge" ;;
+    chrome)   print -r -- "Google Chrome" ;;
+    brave)    print -r -- "Brave Browser" ;;
+    arc)      print -r -- "Arc" ;;
+    chromium) print -r -- "Chromium" ;;
+    *) return 1 ;;
+  esac
+}
+
+_browser_linux_bins() {  # $1 key -> space-separated candidate linux binaries
+  case "$1" in
+    edge)     print -r -- "microsoft-edge microsoft-edge-stable" ;;
+    chrome)   print -r -- "google-chrome google-chrome-stable" ;;
+    brave)    print -r -- "brave-browser brave" ;;
+    arc)      print -r -- "arc" ;;
+    chromium) print -r -- "chromium chromium-browser" ;;
+    *) return 1 ;;
+  esac
+}
+
+_browser_localstate_dir() {  # $1 key -> dir containing "Local State" (per OS)
+  local app
   case "$AI_OS" in
     macos)
       case "$1" in
-        edge)   [[ -d "/Applications/Microsoft Edge.app" ]] ;;
-        chrome) [[ -d "/Applications/Google Chrome.app" ]] ;;
+        edge)     print -r -- "$HOME/Library/Application Support/Microsoft Edge" ;;
+        chrome)   print -r -- "$HOME/Library/Application Support/Google/Chrome" ;;
+        brave)    print -r -- "$HOME/Library/Application Support/BraveSoftware/Brave-Browser" ;;
+        arc)      print -r -- "$HOME/Library/Application Support/Arc/User Data" ;;
+        chromium) print -r -- "$HOME/Library/Application Support/Chromium" ;;
+        *) return 1 ;;
       esac ;;
     linux)
       case "$1" in
-        edge)   command -v microsoft-edge >/dev/null 2>&1 || command -v microsoft-edge-stable >/dev/null 2>&1 ;;
-        chrome) command -v google-chrome  >/dev/null 2>&1 || command -v google-chrome-stable  >/dev/null 2>&1 || command -v chromium >/dev/null 2>&1 ;;
+        edge)     print -r -- "$HOME/.config/microsoft-edge" ;;
+        chrome)   print -r -- "$HOME/.config/google-chrome" ;;
+        brave)    print -r -- "$HOME/.config/BraveSoftware/Brave-Browser" ;;
+        arc)      print -r -- "$HOME/.config/arc" ;;
+        chromium) print -r -- "$HOME/.config/chromium" ;;
+        *) return 1 ;;
       esac ;;
     *) return 1 ;;
   esac
 }
 
-_launch_edge() {  # personal browser identity (no forced URL)
+# Map an app name / binary (as stored in AI_BROWSER or AI_GUI_BROWSER_<id>) to a
+# canonical key, so we can look up its Local State dir etc. Accepts either macOS app
+# names ("Microsoft Edge") or linux binaries ("google-chrome-stable").
+_browser_key_for() {  # $1 = app-name-or-bin -> canonical key (or empty)
+  local want="$1" k app bins b
+  for k in "${_CHROMIUM_KEYS[@]}"; do
+    app="$(_browser_macos_app "$k")"
+    [[ "$want" == "$app" ]] && { print -r -- "$k"; return 0; }
+    bins="$(_browser_linux_bins "$k")"
+    for b in ${=bins}; do
+      [[ "$want" == "$b" ]] && { print -r -- "$k"; return 0; }
+    done
+  done
+  return 1
+}
+
+# Resolve a launchable target for an app-name-or-bin on the current OS.
+#   macOS: echoes the app name if the .app bundle exists.
+#   linux: echoes the first candidate binary found on PATH.
+# Also accepts a raw app name / binary not in the registry (best effort).
+_browser_launch_target() {  # $1 = app-name-or-bin -> launch target (or fail)
+  local want="$1" key bins b
+  key="$(_browser_key_for "$want")" || key=""
   case "$AI_OS" in
-    macos) open -a "Microsoft Edge" ;;
-    linux) (microsoft-edge >/dev/null 2>&1 &) 2>/dev/null || (microsoft-edge-stable >/dev/null 2>&1 &) ;;
+    macos)
+      if [[ -n "$key" ]]; then
+        local app; app="$(_browser_macos_app "$key")"
+        [[ -d "/Applications/$app.app" ]] && { print -r -- "$app"; return 0; }
+        return 1
+      fi
+      # Unknown: treat $want as an app name, accept if bundle exists.
+      [[ -d "/Applications/$want.app" ]] && { print -r -- "$want"; return 0; }
+      return 1 ;;
+    linux)
+      if [[ -n "$key" ]]; then
+        bins="$(_browser_linux_bins "$key")"
+        for b in ${=bins}; do
+          command -v "$b" >/dev/null 2>&1 && { print -r -- "$b"; return 0; }
+        done
+        return 1
+      fi
+      command -v "$want" >/dev/null 2>&1 && { print -r -- "$want"; return 0; }
+      return 1 ;;
     *) return 1 ;;
   esac
 }
 
-_launch_chrome_profile() {  # $1 profile, rest = URLs (company identity)
-  local profile="$1"; shift
-  case "$AI_OS" in
-    macos) open -na "Google Chrome" --args --profile-directory="$profile" "$@" ;;
-    linux)
-      local bin
-      for bin in google-chrome google-chrome-stable chromium; do
-        command -v "$bin" >/dev/null 2>&1 && { ("$bin" --profile-directory="$profile" "$@" >/dev/null 2>&1 &); return 0; }
-      done
-      return 1 ;;
+# First detected Chromium browser on this OS (echoes app-name/bin), else fail.
+_browser_first_detected() {
+  local k target
+  for k in "${_CHROMIUM_KEYS[@]}"; do
+    case "$AI_OS" in
+      macos)   target="$(_browser_macos_app "$k")" ;;
+      linux)   local bins; bins="$(_browser_linux_bins "$k")"; target="${${=bins}[1]}" ;;
+      *) return 1 ;;
+    esac
+    _browser_launch_target "$target" >/dev/null 2>&1 && { print -r -- "$target"; return 0; }
+  done
+  return 1
+}
+
+_has_browser() {  # $1 = edge|chrome|brave|arc|chromium — back-compat predicate
+  local app
+  case "$1" in
+    edge)     app="$(_browser_macos_app edge)" ;;
+    chrome)   app="$(_browser_macos_app chrome)" ;;
+    brave)    app="$(_browser_macos_app brave)" ;;
+    arc)      app="$(_browser_macos_app arc)" ;;
+    chromium) app="$(_browser_macos_app chromium)" ;;
     *) return 1 ;;
   esac
+  _browser_launch_target "$app" >/dev/null 2>&1
+}
+
+# Launch a Chromium browser with an arbitrary set of flags + URLs.
+#   $1 = launch target (macOS app name / linux binary), rest = flags and URLs.
+_launch_browser() {  # $1 target, rest = flags+urls
+  local target="$1"; shift
+  case "$AI_OS" in
+    macos) open -na "$target" --args "$@" ;;
+    linux) ("$target" "$@" >/dev/null 2>&1 &); return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Isolated launch mirroring _launch_app_isolated: creates the data-dir, launches the
+# browser bound to it, then opens the URLs in that instance.
+#   $1 = launch target, $2 = data-dir, rest = URLs.
+_launch_browser_isolated() {  # $1 target, $2 data-dir, rest = urls
+  local target="$1" datadir="$2"; shift 2
+  mkdir -p "$datadir"
+  _launch_browser "$target" --user-data-dir="$datadir" "$@"
+}
+
+# Profile launch (opt-in): reuse an existing browser profile.
+#   $1 = launch target, $2 = profile directory name, rest = URLs.
+_launch_browser_profile() {  # $1 target, $2 profile, rest = urls
+  local target="$1" profile="$2"; shift 2
+  _launch_browser "$target" --profile-directory="$profile" "$@"
 }
 
 _has_app_bundle() {  # $1 = /Applications/Foo.app — macOS .app bundles are directories
@@ -308,22 +433,323 @@ run_tool() {  # <tool> <workspace> [--account X] [-- passthrough...]
   esac
 }
 
-_gui_browser() {  # personal|company — legacy browser identity path (also the fallback)
-  case "$1" in
-    personal)
-      if _has_browser edge; then print -r -- "→ gui personal: Microsoft Edge"; _launch_edge
-      else warn "Microsoft Edge not found; opening default browser."; _open_url "$AI_COMPANY_CLAUDE_URL"; fi ;;
-    company)
-      if _has_browser chrome; then
-        print -r -- "→ gui company: Chrome profile \"$AI_CHROME_COMPANY_PROFILE\" + company chat URLs"
-        _launch_chrome_profile "$AI_CHROME_COMPANY_PROFILE" "$AI_COMPANY_CHATGPT_URL" "$AI_COMPANY_CLAUDE_URL" \
-          || { warn "could not launch Chrome with a dedicated profile."; return 1; }
-      else warn "Google Chrome not found; cannot open dedicated company profile."; return 1; fi ;;
-    *) print -r -- "usage: ai gui <personal|company>" >&2; return 2 ;;
-  esac
+# ---------- generic browser-identity resolution ----------
+# Resolve the configured browser name for an identity (before existence check):
+#   AI_GUI_BROWSER_<id> → AI_BROWSER → (empty; caller auto-detects).
+_gui_resolve_browser_pref() {  # $1 = id -> configured browser (may be empty)
+  local id="$1"
+  local v="AI_GUI_BROWSER_$id"
+  local pref="${(P)v:-}"
+  [[ -n "$pref" ]] && { print -r -- "$pref"; return 0; }
+  # Legacy fallback: a pre-generic config that only set AI_CHROME_COMPANY_PROFILE
+  # meant "company → Google Chrome, that profile". Preserve the browser too so an
+  # upgrading config does not silently switch company to Edge.
+  if [[ "$id" == company ]]; then
+    local pv="AI_GUI_PROFILE_company"
+    [[ -z "${(P)pv:-}" && -n "${AI_CHROME_COMPANY_PROFILE:-}" ]] && { print -r -- "Google Chrome"; return 0; }
+  fi
+  [[ -n "${AI_BROWSER:-}" ]] && { print -r -- "$AI_BROWSER"; return 0; }
+  return 0
 }
 
-cmd_gui() {  # <personal|company> [--browser] [--dry-run]
+# Resolve URLs for an identity: AI_GUI_URLS_<id> → legacy company URL fallback.
+_gui_resolve_urls() {  # $1 = id -> space-separated URLs (may be empty)
+  local id="$1"
+  local v="AI_GUI_URLS_$id"
+  local urls="${(P)v:-}"
+  if [[ -n "$urls" ]]; then print -r -- "$urls"; return 0; fi
+  [[ "$id" == company ]] && print -r -- "$AI_COMPANY_CHATGPT_URL $AI_COMPANY_CLAUDE_URL"
+  return 0
+}
+
+# Resolve opt-in profile for an identity: AI_GUI_PROFILE_<id> → legacy company profile.
+_gui_resolve_profile() {  # $1 = id -> profile name (may be empty)
+  local id="$1"
+  local v="AI_GUI_PROFILE_$id"
+  local profile="${(P)v:-}"
+  # Legacy fallback: pre-generic configs set AI_CHROME_COMPANY_PROFILE for company.
+  [[ -z "$profile" && "$id" == company ]] && profile="${AI_CHROME_COMPANY_PROFILE:-}"
+  print -r -- "$profile"
+}
+
+# Generic browser identity path (also the native fallback). Resolution order per spec:
+#   browser = AI_GUI_BROWSER_<id> → AI_BROWSER → first detected Chromium → OS default.
+#   Never hard-blocks: an unresolved browser opens URLs in the OS default + a hint.
+_gui_browser() {  # <id> [--dry-run]
+  local id="" dry=0
+  while (( $# )); do
+    case "$1" in
+      --dry-run) dry=1; shift ;;
+      *) id="$1"; shift ;;
+    esac
+  done
+  [[ -n "$id" ]] || { print -r -- "usage: ai gui <personal|company>" >&2; return 2; }
+
+  local pref urls profile target datadir source
+  pref="$(_gui_resolve_browser_pref "$id")"
+  urls="$(_gui_resolve_urls "$id")"
+  profile="$(_gui_resolve_profile "$id")"
+  local -a urlv=(); [[ -n "$urls" ]] && urlv=(${=urls})
+
+  # Resolve a launchable target: configured pref → first detected Chromium.
+  target=""; source=""
+  if [[ -n "$pref" ]]; then
+    if target="$(_browser_launch_target "$pref")"; then source="configured"
+    else warn "configured browser not found: $pref"; target=""; fi
+  fi
+  if [[ -z "$target" ]]; then
+    if target="$(_browser_first_detected)"; then source="auto-detected"; fi
+  fi
+
+  # No Chromium browser resolvable → OS default opens URLs (never hard-block).
+  if [[ -z "$target" ]]; then
+    if (( dry )); then
+      print -r -- "gui (browser) id=$id"
+      print -r -- "  browser:   (none resolved) -> OS default browser"
+      print -r -- "  urls:      ${urls:-(none)}"
+      print -r -- "  hint:      run 'ai gui setup' to configure a Chromium browser"
+      return 0
+    fi
+    warn "no Chromium browser resolved for '$id'; opening URLs in the OS default browser."
+    warn "hint: run 'ai gui setup' to configure a browser for isolated identities."
+    (( ${#urlv} )) && _open_url "${urlv[@]}"
+    return 0
+  fi
+
+  if [[ -n "$profile" ]]; then
+    # Opt-in: reuse an existing browser profile.
+    if (( dry )); then
+      print -r -- "gui (browser) id=$id"
+      print -r -- "  browser:   $target ($source)"
+      print -r -- "  mechanism: profile (--profile-directory)"
+      print -r -- "  profile:   $profile"
+      print -r -- "  urls:      ${urls:-(none)}"
+      return 0
+    fi
+    print -r -- "→ gui $id: $target profile \"$profile\"${urls:+ + urls}"
+    _launch_browser_profile "$target" "$profile" "${urlv[@]}" \
+      || { warn "could not launch $target with profile \"$profile\"."; return 1; }
+    return 0
+  fi
+
+  # Default: isolated user-data-dir (auto-created, mirrors the desktop-app path).
+  datadir="${AI_BROWSER_DATA_PREFIX}${id}"
+  if (( dry )); then
+    print -r -- "gui (browser) id=$id"
+    print -r -- "  browser:   $target ($source)"
+    print -r -- "  mechanism: isolated data-dir (--user-data-dir)"
+    print -r -- "  data-dir:  $datadir"
+    print -r -- "  urls:      ${urls:-(none)}"
+    return 0
+  fi
+  print -r -- "→ gui $id: $target (isolated)  data-dir=$datadir${urls:+ + urls}"
+  _launch_browser_isolated "$target" "$datadir" "${urlv[@]}" \
+    || { warn "could not launch $target isolated."; return 1; }
+  return 0
+}
+
+# ---------- ai gui setup helpers ----------
+# List existing profile display names from a browser's "Local State" JSON.
+# Output: one line per profile, "<dir>\t<display name>". Degrades to nothing if the
+# file is unreadable or cannot be parsed (caller falls back to isolated data-dir).
+_setup_profiles_for() {  # $1 = browser key
+  local dir ls
+  dir="$(_browser_localstate_dir "$1")" || return 1
+  ls="$dir/Local State"
+  [[ -r "$ls" ]] || return 1
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$ls" <<'PY' 2>/dev/null || return 1
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as f:
+        data = json.load(f)
+    info = (data.get("profile") or {}).get("info_cache") or {}
+    for d, meta in info.items():
+        name = (meta or {}).get("name") or d
+        print("%s\t%s" % (d, name))
+except Exception:
+    sys.exit(1)
+PY
+  else
+    # jq-free, python-free degrade: emit nothing so caller uses isolated data-dir.
+    return 1
+  fi
+}
+
+# Write/update a single `KEY="VALUE"` line in the config file without clobbering
+# unrelated lines. Creates the file (and its dir) if missing. Immutable-style:
+# builds a new file via a temp then atomically moves it into place.
+_cfg_set_var() {  # $1 key, $2 value
+  local key="$1" val="$2" target dir tmp found=0 mode=""
+  # Follow a symlinked config (dotfiles setups) so we update the real file
+  # instead of replacing the symlink with a plain file.
+  target="$_cfg"
+  if [[ -L "$target" ]]; then
+    local link; link="$(readlink "$target")"
+    case "$link" in
+      /*) target="$link" ;;
+      *)  target="${_cfg:h}/$link" ;;
+    esac
+  fi
+  dir="${target:h}"
+  mkdir -p "$dir"
+  [[ -f "$target" ]] || : > "$target"
+  # Same-directory temp so the final mv is an atomic same-filesystem rename.
+  tmp="$(mktemp "${dir}/router.env.XXXXXX")" || return 1
+  # Preserve the original file's mode (best-effort; macOS then linux stat).
+  mode="$(stat -f '%Lp' "$target" 2>/dev/null || stat -c '%a' "$target" 2>/dev/null || true)"
+  [[ -n "$mode" ]] && chmod "$mode" "$tmp" 2>/dev/null
+  local line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" == "$key="* ]]; then
+      # ${(qq)} quotes the value so a sourced router.env can never execute
+      # embedded $(...)/backticks and always round-trips exactly.
+      print -r -- "$key=${(qq)val}" >> "$tmp"; found=1
+    else
+      print -r -- "$line" >> "$tmp"
+    fi
+  done < "$target"
+  (( found )) || print -r -- "$key=${(qq)val}" >> "$tmp"
+  mv "$tmp" "$target"
+}
+
+# Detect installed Chromium browsers; echo "<key>\t<launch-target>" per line.
+_setup_detect_browsers() {
+  local k target label
+  for k in "${_CHROMIUM_KEYS[@]}"; do
+    case "$AI_OS" in
+      macos) label="$(_browser_macos_app "$k")" ;;
+      linux) local bins; bins="$(_browser_linux_bins "$k")"; label="${${=bins}[1]}" ;;
+      *) return 0 ;;
+    esac
+    if target="$(_browser_launch_target "$label")"; then
+      printf '%s\t%s\n' "$k" "$target"
+    fi
+  done
+}
+
+# `ai gui setup` — interactive one-time config helper. --print = dry-run (show the
+# lines that would be written; touch nothing). Defensive: unreadable Local State
+# degrades to isolated data-dir mode for that identity.
+cmd_gui_setup() {  # [--print]
+  local dry=0
+  while (( $# )); do
+    case "$1" in
+      --print) dry=1; shift ;;
+      *) print -r -- "usage: ai gui setup [--print]" >&2; return 2 ;;
+    esac
+  done
+
+  print -r -- "== ai gui setup =="
+  print -r -- "config: $_cfg"
+  print -r -- ""
+
+  # Detect installed browsers.
+  local -a detected_keys=() detected_targets=()
+  local line k t
+  while IFS=$'\t' read -r k t; do
+    [[ -n "$k" ]] || continue
+    detected_keys+=("$k"); detected_targets+=("$t")
+  done < <(_setup_detect_browsers)
+
+  if (( ${#detected_keys} == 0 )); then
+    print -r -- "No Chromium browsers detected. Identities will use the OS default browser."
+    print -r -- "You can still set AI_GUI_URLS_<id> manually in $_cfg."
+    return 0
+  fi
+
+  print -r -- "Detected Chromium browsers:"
+  local i
+  for i in {1..${#detected_keys}}; do
+    print -r -- "  $i) ${detected_targets[$i]}  [${detected_keys[$i]}]"
+  done
+  print -r -- ""
+
+  # Collect the config lines to write (immutable accumulation).
+  # All locals declared once up front; re-running `local` inside the loop would
+  # re-print name=value under some zsh configs, so declare here.
+  local -a out_keys=() out_vals=() profs=() profnames=()
+  local id choice target key pdir pname use_profile urls default_urls j
+  setopt local_options extended_glob
+  for id in personal company; do
+    print -r -- "--- identity: $id ---"
+    # Choose a browser.
+    if (( dry )); then
+      choice=1  # non-interactive dry-run: assume first detected browser
+    else
+      print -r -- "Choose browser for '$id' [1-${#detected_keys}] (Enter = 1, s = skip):"
+      read -r choice
+      [[ "$choice" == s ]] && { print -r -- "  (skipped)"; print -r -- ""; continue; }
+      [[ -n "$choice" ]] || choice=1
+    fi
+    [[ "$choice" == <-> && "$choice" -ge 1 && "$choice" -le ${#detected_keys} ]] || choice=1
+    key="${detected_keys[$choice]}"; target="${detected_targets[$choice]}"
+    out_keys+=("AI_GUI_BROWSER_$id"); out_vals+=("$target")
+
+    # Mechanism: isolated (default) or an existing profile.
+    profs=(); profnames=()
+    while IFS=$'\t' read -r pdir pname; do
+      [[ -n "$pdir" ]] || continue
+      profs+=("$pdir"); profnames+=("$pname")
+    done < <(_setup_profiles_for "$key")
+
+    use_profile=""
+    if (( ${#profs} )) && (( ! dry )); then
+      print -r -- "  Existing profiles in $target:"
+      for j in {1..${#profs}}; do
+        print -r -- "    $j) ${profnames[$j]}  [${profs[$j]}]"
+      done
+      print -r -- "  Use an existing profile? Enter number, or Enter for isolated data-dir:"
+      read -r use_profile
+    elif (( ${#profs} == 0 )); then
+      (( dry )) || print -r -- "  (no readable profiles; using isolated data-dir)"
+    fi
+
+    if [[ -n "$use_profile" && "$use_profile" == <-> && "$use_profile" -ge 1 && "$use_profile" -le ${#profs} ]]; then
+      out_keys+=("AI_GUI_PROFILE_$id"); out_vals+=("${profs[$use_profile]}")
+    else
+      # Isolated data-dir: clear any stale profile override.
+      out_keys+=("AI_GUI_PROFILE_$id"); out_vals+=("")
+    fi
+
+    # URLs.
+    default_urls="$(_gui_resolve_urls "$id")"
+    if (( dry )); then
+      urls="$default_urls"
+    else
+      print -r -- "  URLs to open for '$id' (space-separated, Enter = ${default_urls:-none}):"
+      read -r urls
+      [[ -n "$urls" ]] || urls="$default_urls"
+    fi
+    out_keys+=("AI_GUI_URLS_$id"); out_vals+=("$urls")
+    print -r -- ""
+  done
+
+  # Write or preview.
+  if (( dry )); then
+    print -r -- "Would write to $_cfg:"
+    local n
+    for (( n = 1; n <= ${#out_keys}; n++ )); do
+      print -r -- "  ${out_keys[$n]}=${(qq)out_vals[$n]}"
+    done
+    return 0
+  fi
+
+  local n
+  for (( n = 1; n <= ${#out_keys}; n++ )); do
+    _cfg_set_var "${out_keys[$n]}" "${out_vals[$n]}"
+  done
+  print -r -- "Wrote ${#out_keys} setting(s) to $_cfg"
+  return 0
+}
+
+cmd_gui() {  # <personal|company|setup> [--browser] [--dry-run] [--print]
+  # Subcommand: `ai gui setup` (interactive config helper; --print for dry-run).
+  if [[ "${1:-}" == setup ]]; then
+    shift
+    cmd_gui_setup "$@"; return
+  fi
+
   local id="" browser=0 dry=0
   while (( $# )); do
     case "$1" in
@@ -333,15 +759,11 @@ cmd_gui() {  # <personal|company> [--browser] [--dry-run]
       *) print -r -- "usage: ai gui <personal|company> [--browser] [--dry-run]" >&2; return 2 ;;
     esac
   done
-  valid_ws "$id" || { print -r -- "usage: ai gui <personal|company> [--browser] [--dry-run]" >&2; return 2; }
+  valid_ws "$id" || { print -r -- "usage: ai gui <personal|company|setup> [--browser] [--dry-run]" >&2; return 2; }
 
-  # Forced browser, or no native GUI on this OS -> legacy browser identity path.
+  # Forced browser, or no native GUI on this OS -> generic browser identity path.
   if (( browser )) || [[ "$AI_OS" != macos ]]; then
-    if (( dry )); then
-      print -r -- "gui (browser) id=$id"
-      print -r -- "  would run the browser identity path (Edge / Chrome profile + URLs)"
-      return 0
-    fi
+    if (( dry )); then _gui_browser "$id" --dry-run; return; fi
     _gui_browser "$id"; return
   fi
 
@@ -494,6 +916,28 @@ cmd_doctor() {
       [[ -d "$gd" ]] && print -r -- "    data/$a: $gd (exists)" \
                      || print -r -- "    data/$a: $gd (missing)"
     done
+  done
+  print -r -- "gui browser identities:"
+  print -r -- "  AI_BROWSER: ${AI_BROWSER:-(unset -> auto-detect)}"
+  local bid bpref btarget bprofile bdatadir
+  for bid in personal company; do
+    bpref="$(_gui_resolve_browser_pref "$bid")"
+    if [[ -n "$bpref" ]] && btarget="$(_browser_launch_target "$bpref")"; then :
+    elif btarget="$(_browser_first_detected)"; then :
+    else btarget=""; fi
+    if [[ -z "$btarget" ]]; then
+      print -r -- "  $bid: no Chromium browser resolved -> OS default (run 'ai gui setup')"
+      continue
+    fi
+    bprofile="$(_gui_resolve_profile "$bid")"
+    if [[ -n "$bprofile" ]]; then
+      print -r -- "  $bid: $btarget  mechanism=profile  profile=\"$bprofile\""
+    else
+      bdatadir="${AI_BROWSER_DATA_PREFIX}${bid}"
+      [[ -d "$bdatadir" ]] \
+        && print -r -- "  $bid: $btarget  mechanism=data-dir  $bdatadir (exists)" \
+        || print -r -- "  $bid: $btarget  mechanism=data-dir  $bdatadir (missing)"
+    fi
   done
   print -r -- "log resolution (examples):"
   print -r -- "  company/claude/personal -> $(log_dir company claude personal)"
@@ -657,6 +1101,7 @@ usage() {
 ai — AI session router
 
   ai gui     <personal|company> [--browser] [--dry-run]
+  ai gui setup [--print]
   ai shell   <personal|company>
   ai claude  <personal|company> [--account personal|company] [-- args...]
   ai codex   <personal|company> [--account personal|company] [-- args...]

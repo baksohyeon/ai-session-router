@@ -37,9 +37,23 @@ AI_PERSONAL_WS="$PERSONAL_WS"
 AI_COMPANY_WS="$COMPANY_WS"
 AI_CLAUDE_ROOT_PREFIX="\$HOME/.claude-"
 AI_CODEX_ROOT_PREFIX="\$HOME/.codex-"
-AI_CHROME_COMPANY_PROFILE="Work"
-AI_COMPANY_CHATGPT_URL="https://chatgpt.com/"
-AI_COMPANY_CLAUDE_URL="https://claude.ai/"
+
+# Browser isolation (generic \`ai gui\` browser path).
+# DEFAULT mechanism: launch browser with --user-data-dir=<prefix><id>, which auto-creates
+# an isolated instance (no pre-existing profile required) — mirrors the desktop-app path.
+AI_BROWSER="Microsoft Edge"                 # default browser; empty → auto-detect Chromium, else OS default
+AI_BROWSER_DATA_PREFIX="\$HOME/.ai-browser-" # router appends <id>, e.g. ~/.ai-browser-company
+AI_GUI_BROWSER_personal=""                  # optional: override AI_BROWSER for this identity
+AI_GUI_BROWSER_company=""
+AI_GUI_URLS_personal=""                     # optional: space-separated URLs to open on launch
+AI_GUI_URLS_company="https://chatgpt.com/ https://claude.ai/"
+AI_GUI_PROFILE_personal=""                  # optional: set → --profile-directory (existing profile) instead of data-dir
+AI_GUI_PROFILE_company=""
+
+# NOTE: pre-generic configs may also carry AI_CHROME_COMPANY_PROFILE /
+# AI_COMPANY_CHATGPT_URL / AI_COMPANY_CLAUDE_URL — those are still honored as
+# fallbacks if present, but fresh installs omit them so the isolated-data-dir
+# default above applies. See examples/router.env.example for the upgrade note.
 AI_CLAUDE_APP="/Applications/Claude.app"
 AI_CLAUDE_APP_DATA_PREFIX="\$HOME/.claude-app-"
 AI_GUI_APPS="claude"

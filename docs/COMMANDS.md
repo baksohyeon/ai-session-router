@@ -1,7 +1,8 @@
 # Command reference
 
 ```
-ai gui     <personal|company> [--browser] [--dry-run]      # native Claude app, isolated per account (macOS)
+ai gui     <personal|company> [--browser] [--dry-run]      # native Claude app, else isolated browser instance
+ai gui     setup [--print]                                 # detect browsers, map identities → router.env
 ai shell   <personal|company>                              # subshell cd'd into workspace
 ai claude  <personal|company> [--account p|c] [-- args]    # launch Claude Code
 ai codex   <personal|company> [--account p|c] [-- args]    # launch Codex
@@ -15,13 +16,36 @@ ai resolve <claude|codex> <ws> [--account p|c]             # DRY-RUN preview (no
 
 ## Rules
 
-- **`ai gui`** launches the native Claude desktop app with a per-account
-  `--user-data-dir` (`~/.claude-app-<account>`), so personal and company stay logged in
-  separately and simultaneously. If `Claude.app` is absent (or on non-macOS), it falls
-  back to the browser identity path. `--browser` forces that fallback; `--dry-run`
-  prints the exact `open` command without launching. App data dirs are separate from the
-  CLI roots (`~/.claude-<account>`). Native isolation is Electron-only; ChatGPT (native
-  AppKit) is not isolatable this way and stays on the browser path.
+- **`ai gui <personal|company>`** launches the native Claude desktop app with a
+  per-account `--user-data-dir` (`~/.claude-app-<account>`), so personal and company stay
+  logged in separately and simultaneously. If `Claude.app` is absent (or on non-macOS),
+  it falls back to the **browser identity path**. `--browser` forces that fallback;
+  `--dry-run` prints the exact launch command without launching. App data dirs are
+  separate from the CLI roots (`~/.claude-<account>`). Native isolation is Electron-only;
+  ChatGPT (native AppKit) is not isolatable this way and stays on the browser path.
+- **Browser identity path (generic).** One identity = one isolated browser instance,
+  launched with the same `--user-data-dir` mechanism the desktop app uses. No specific
+  browser and no pre-existing profile are required — the isolated data-dir is
+  auto-created. Two mechanisms:
+  - **Isolated data-dir** (default) — `--user-data-dir=${AI_BROWSER_DATA_PREFIX}<id>`;
+    zero setup, clean slate. Signing into the browser account inside it triggers Chromium
+    sync, so bookmarks/extensions/passwords populate after a one-time login.
+  - **Existing profile** (opt-in per identity) — set `AI_GUI_PROFILE_<id>` to reuse an
+    existing profile's logins/bookmarks via `--profile-directory=<name>`.
+
+  Your everyday browser (opened by clicking its icon = the default data-dir) is never
+  touched; `ai gui` always launches a separate isolated instance. If no browser resolves,
+  it falls back to the OS default browser opening the URLs and hints to run `ai gui setup`.
+- **`ai gui setup [--print]`** is a one-time helper: it detects installed Chromium
+  browsers (Edge, Chrome, Brave, Arc, Chromium), lists their existing profiles, prompts
+  you to map each identity → (browser, isolated | profile, URLs), and writes only the
+  relevant `AI_*` lines into `router.env` (never clobbering unrelated lines). `--print`
+  shows what it would write without changing anything. Setup is convenience, not a gate —
+  if you never run it, defaults still work (isolated data-dir with the auto-detected
+  browser). Runtime `ai gui` launches are always non-interactive. Config vars:
+  `AI_BROWSER`, `AI_BROWSER_DATA_PREFIX`, `AI_GUI_BROWSER_<id>`, `AI_GUI_URLS_<id>`,
+  `AI_GUI_PROFILE_<id>`. Legacy `AI_CHROME_COMPANY_PROFILE` / `AI_COMPANY_*_URL` are still
+  honored as fallbacks, so existing configs keep working; migration is not forced.
 - **Default account** follows the workspace: `personal`→personal, `company`→company.
 - **Override** with `--account personal|company`.
 - **`--` passthrough**: everything after `--` is forwarded verbatim to the tool.
@@ -60,7 +84,9 @@ Recommended flow: run `ai keychain list`, eyeball the orphans, then `ai keychain
 
 - `ai doctor` — OS, shell, PATH, tool availability, browsers, workspace paths, config
   roots (exists/missing), per-account auth isolation (verified Keychain entry on macOS),
-  a keychain-scheme version guard, example log resolution, config file in use.
+  a keychain-scheme version guard, example log resolution, config file in use. For the
+  GUI it also reports the resolved browser per identity, the mechanism (data-dir vs
+  profile), and the resolved data-dir / profile with exists/missing status.
 - `ai remote doctor` — hostname, user, Tailscale status/IP, sshd listening check,
   tmux sessions. **Never configures Tailscale.**
 - `ai resolve …` — prints exactly what a launch would do (env var, cwd, logs) **without

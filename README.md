@@ -8,7 +8,7 @@ usage never bleed into each other.
 ai claude company              # company account, company workspace
 ai codex  personal             # personal account, personal workspace
 ai codex  company --account personal   # company workspace, personal account (mix freely)
-ai gui    company              # open the company Claude desktop app (isolated profile)
+ai gui    company              # open company GUI in an isolated browser/app instance
 ai doctor                      # diagnose the whole setup
 ```
 
@@ -23,7 +23,7 @@ state dir: the same account, the same billing, the same chat history, the same l
 |---------------|-------------------------------|---------------------------------------------|
 | **workspace** | files + where logs go         | `cd` into it; logs under `<ws>/.ai-logs/`   |
 | **account**   | auth / billing / session      | `CLAUDE_CONFIG_DIR` · `CODEX_HOME`          |
-| **browser**   | GUI chat identity             | Edge (personal) / Chrome profile (company)  |
+| **browser**   | GUI chat identity             | one isolated browser instance per identity (`--user-data-dir`) |
 | **Tailscale** | remote entry (reported only)  | `ai remote doctor`                          |
 
 Shared dev tools (`ssh`, git, your editor, secret managers) stay global and untouched.
@@ -58,7 +58,9 @@ ${XDG_CONFIG_HOME:-~/.config}/ai-session-router/router.env
 ```
 
 See [examples/router.env.example](examples/router.env.example) for every override
-(workspace paths, config-root prefixes, Chrome profile name, company URLs).
+(workspace paths, config-root prefixes, per-identity browser/URLs/profile). Or run
+`ai gui setup` once to auto-detect installed browsers and write the per-identity
+mappings for you.
 
 ## Commands
 
@@ -66,6 +68,7 @@ Full reference: [docs/COMMANDS.md](docs/COMMANDS.md). Summary:
 
 ```
 ai gui|shell|tmux   <personal|company>
+ai gui setup [--print]                                         # detect browsers, write per-identity mappings
 ai claude|codex     <personal|company> [--account personal|company] [-- tool-args...]
 ai resolve <claude|codex> <personal|company> [--account ...]   # dry-run preview
 ai doctor | ai remote doctor | ai logs

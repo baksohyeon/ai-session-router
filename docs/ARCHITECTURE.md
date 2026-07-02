@@ -15,7 +15,7 @@ A "session" is decomposed into independent axes that combine freely:
 |---------------|-------------------------------|---------------------------------------------|
 | **workspace** | files + log location          | `cd`; logs under `<ws>/.ai-logs/`           |
 | **account**   | auth / billing / session      | `CLAUDE_CONFIG_DIR` · `CODEX_HOME`          |
-| **browser**   | GUI chat identity             | per-OS browser launch                       |
+| **browser**   | GUI chat identity             | isolated browser instance (`--user-data-dir`) |
 | **Tailscale** | remote entry (report only)    | `ai remote doctor`                          |
 
 Changing one axis never affects the others. `ai codex company --account personal` =
@@ -51,6 +51,38 @@ never moved; seed new roots by cloning or by a fresh login.
 `<workspace>/.ai-logs/<tool>/<account>-account/session-<timestamp>.log`.
 **Workspace owns logs; account owns auth.** A terminal transcript is captured via
 `script(1)` (TTY-preserving, so the interactive TUI still works).
+
+### Browser isolation (`ai gui`)
+
+The GUI path reuses the exact isolation trick the Claude desktop app already relies on.
+Chromium-based apps and browsers accept `--user-data-dir=<path>`, which spins up an
+**isolated instance with its own storage and auto-creates the directory** — no
+pre-existing profile required. The desktop app passes `--user-data-dir=~/.claude-app-<account>`;
+the browser path is the same idea generalized to any Chromium browser (Edge, Chrome,
+Brave, Arc, Chromium):
+
+> One identity = one isolated browser instance. Nothing is forced — no required browser,
+> no pre-created profile, no interactive prompt on every launch.
+
+Two mechanisms, resolved per identity:
+
+| Mechanism | Flag | Setup | Use |
+|-----------|------|-------|-----|
+| **Isolated data-dir** (default) | `--user-data-dir=${AI_BROWSER_DATA_PREFIX}<id>` | none, auto-created | zero-setup clean isolation |
+| **Existing profile** (opt-in) | `--profile-directory=<name>` | profile must exist | reuse an existing profile's logins/bookmarks |
+
+The default forces nothing. Signing into the browser account inside a fresh data-dir
+triggers **Chromium sync**, so bookmarks/extensions/passwords/history populate after a
+one-time login — equivalent to a profile without pre-creating one. The user's everyday
+browser (launched by clicking its icon → the *default* data-dir) is never touched.
+
+Resolution per identity `<id>`: browser = `AI_GUI_BROWSER_<id>` → `AI_BROWSER` → first
+detected Chromium browser → OS default (open URLs only + warn). URLs = `AI_GUI_URLS_<id>`.
+If `AI_GUI_PROFILE_<id>` is set, launch with `--profile-directory`; else `--user-data-dir`.
+Legacy `AI_CHROME_COMPANY_PROFILE` / `AI_COMPANY_*_URL` are honored as fallbacks, so old
+configs keep working (migration is documented, not forced). `ai gui setup` is a one-time
+helper that detects browsers/profiles and writes these per-identity mappings; runtime
+launches stay non-interactive.
 
 ## 4. Guardrails
 
