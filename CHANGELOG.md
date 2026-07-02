@@ -10,12 +10,29 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
   (`--user-data-dir=~/.claude-app-<account>`) on macOS, with browser fallback, plus
   `--browser` and `--dry-run` flags. `ai doctor` reports gui apps and their data dirs.
   Native isolation is Electron-only; ChatGPT (native AppKit) stays on the browser path.
+- `ai gui` also isolates the native Codex desktop app (Electron, verified via `app.asar`)
+  per account (`--user-data-dir=~/.codex-app-<account>`); `AI_GUI_APPS` defaults to
+  `claude codex`, so one command opens both isolated.
+- Generic browser isolation for `ai gui`: `AI_BROWSER` plus per-identity overrides,
+  isolated `--user-data-dir` by default, and `ai gui setup` to auto-detect browsers.
+- `ai keychain list|prune` to audit and clean orphaned Claude Keychain credentials on
+  macOS (dry-run by default; `--force` is fail-closed and confirm-gated).
+- `ai doctor` per-account auth-isolation checks (Claude Keychain-hash verification, Codex
+  auth mode / permission / clone detection) plus `CLAUDE_CODE_OAUTH_TOKEN` /
+  `ANTHROPIC_API_KEY` environment warnings.
+- Bilingual docs under `docs/en` and `docs/ko` with a Language switcher; new `SUPPORT.md`
+  (tool/surface/OS support matrix, mechanisms, official doc links) and `HOW-IT-WORKS.md`.
 - Initial extraction into a standalone, OS-generic project.
 - `bin/ai` router with platform abstraction (macOS + Linux paths).
 - `install.sh` idempotent bootstrap with `router.env` config.
 - Config override layer: `${XDG_CONFIG_HOME:-~/.config}/ai-session-router/router.env`.
 - Docs: ARCHITECTURE, COMMANDS, PORTABILITY; CONTRIBUTING; examples.
 - `.gitignore` that excludes all account roots and logs.
+
+### Changed
+- `ai claude` / `ai codex` keep the current directory when it is already inside the
+  selected workspace, and only relocate to the workspace root (with a warning) when
+  launched from outside it. Previously they always moved to the workspace root.
 
 ### Notes
 - macOS fully tested. Linux paths provided and smoke-tested, not yet verified on a

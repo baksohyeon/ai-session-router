@@ -46,7 +46,7 @@ Full reference: [COMMANDS.md](COMMANDS.md).
 | **Claude desktop app** | yes | `--user-data-dir` (Electron) | `ai gui`. The app embeds Claude Code, so the desktop GUI and the CLI run the same engine |
 | **Claude in a browser** | yes | dedicated profile or isolated user-data dir | `ai gui --browser` |
 | **Codex (CLI)** | yes | `CODEX_HOME` | login is a plaintext `auth.json` in that dir, so isolation is fully reliable |
-| **Codex desktop app (Electron)** | not yet | would use `--user-data-dir` | feasible because it is Electron, but not wired into the router yet |
+| **Codex desktop app (Electron)** | yes | `--user-data-dir` (Electron) | verified Electron (ships `app.asar`); `ai gui` opens it isolated alongside Claude |
 | **ChatGPT desktop app** | no | none available | a native macOS (AppKit) app ignores `--user-data-dir`; use a browser profile instead |
 | **ChatGPT in a browser** | yes | dedicated profile | `ai gui company` opens chatgpt.com in the company profile |
 
@@ -89,7 +89,7 @@ version you run.)
   [config](https://developers.openai.com/codex/config-advanced).
 - **Electron desktop apps, `--user-data-dir`.** Electron embeds Chromium, which stores all
   profile data under `--user-data-dir`. Passing a per-account dir gives each launch its own
-  login. That is why the Claude desktop app isolates, and why a Codex Electron app could too.
+  login. That is why the Claude desktop app isolates, and the Codex desktop app too (it is Electron).
   Reference: [Chromium command-line switches](https://peter.sh/experiments/chromium-command-line-switches/).
 - **Native AppKit apps (ChatGPT.app), no lever.** A native macOS app ignores Chromium flags,
   so `--user-data-dir` does nothing. ChatGPT's own web account switching stays in the browser
@@ -100,14 +100,15 @@ version you run.)
 
 ## Known gaps and behavior notes
 
-- **Codex desktop app**: isolation is feasible (Electron) but not wired in yet. `ai gui`
-  covers the Claude app only.
+- **Codex desktop app**: isolated (it is Electron). `ai gui` opens Claude.app and Codex.app
+  together, each pinned to the account's own `--user-data-dir`. Set `AI_GUI_APPS` to one
+  name to open just one.
 - **ChatGPT desktop app**: cannot be isolated (AppKit). Use `ai gui --browser`.
 - **Windows GUI**: out of scope. The router handles the WSL CLI, not Windows-native apps.
 - **Windows and Linux**: reviewed by reading the code, not live-tested from the macOS host.
-- **Starting directory**: `ai claude` and `ai codex` change into the workspace root
-  (`~/dev/personal` or `~/dev/work`) before launching, so a session opens at the workspace
-  root even when you run the command from a subdirectory. `ai gui` ignores your location.
+- **Starting directory**: `ai claude` and `ai codex` keep you where you are when the current
+  directory is already inside the selected workspace; only when you launch from outside the
+  workspace do they move you to its root (with a warning). `ai gui` ignores your location.
 
 See also [ARCHITECTURE.md](ARCHITECTURE.md), [PORTABILITY.md](PORTABILITY.md), and
 [CODEX-AUTH.md](CODEX-AUTH.md).

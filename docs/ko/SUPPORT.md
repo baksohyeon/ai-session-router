@@ -45,7 +45,7 @@ ai doctor | ai remote doctor | ai logs
 | **Claude 데스크톱 앱** | 됨 | `--user-data-dir` (Electron) | `ai gui`. 앱이 Claude Code를 임베드해서 데스크톱 GUI와 CLI가 같은 엔진으로 돈다 |
 | **브라우저 속 Claude** | 됨 | 전용 프로필 또는 격리 user-data 디렉토리 | `ai gui --browser` |
 | **Codex (CLI)** | 됨 | `CODEX_HOME` | 로그인이 그 디렉토리 안 평문 `auth.json`이라 격리가 완전히 확실하다 |
-| **Codex 데스크톱 앱 (Electron)** | 아직 | `--user-data-dir` 예정 | Electron이라 가능하지만 아직 라우터에 안 붙임 |
+| **Codex 데스크톱 앱 (Electron)** | 됨 | `--user-data-dir` (Electron) | Electron 확인(`app.asar` 포함). `ai gui`가 Claude와 함께 격리 실행 |
 | **ChatGPT 데스크톱 앱** | 안 됨 | 방법 없음 | 네이티브 macOS(AppKit) 앱이라 `--user-data-dir`을 무시한다. 브라우저 프로필로 대신하라 |
 | **브라우저 속 ChatGPT** | 됨 | 전용 프로필 | `ai gui company`가 회사 프로필로 chatgpt.com을 연다 |
 
@@ -87,7 +87,7 @@ Windows에서는:
   [config](https://developers.openai.com/codex/config-advanced).
 - **Electron 데스크톱 앱, `--user-data-dir`.** Electron은 Chromium을 품고, Chromium은 프로필
   데이터를 전부 `--user-data-dir` 아래 둔다. 계정별 디렉토리를 넘기면 실행마다 로그인이 따로
-  잡힌다. Claude 데스크톱 앱이 격리되는 이유이고, Codex Electron 앱도 될 수 있는 이유다.
+  잡힌다. Claude 데스크톱 앱이 격리되는 이유이고, Codex 데스크톱 앱도 되는 이유다(Electron이라).
   참고: [Chromium command-line switches](https://peter.sh/experiments/chromium-command-line-switches/).
 - **네이티브 AppKit 앱(ChatGPT.app), 레버 없음.** 네이티브 macOS 앱은 Chromium 플래그를
   무시해서 `--user-data-dir`이 아무 일도 안 한다. ChatGPT 자체의 웹 계정 전환은 브라우저 안에
@@ -98,14 +98,14 @@ Windows에서는:
 
 ## 알려진 갭과 동작 메모
 
-- **Codex 데스크톱 앱**: 격리가 가능(Electron)하지만 아직 안 붙였다. `ai gui`는 Claude 앱만
-  다룬다.
+- **Codex 데스크톱 앱**: 격리된다(Electron). `ai gui`가 Claude.app과 Codex.app을 함께,
+  각각 계정별 `--user-data-dir`로 연다. 하나만 열려면 `AI_GUI_APPS`에 이름 하나만 넣는다.
 - **ChatGPT 데스크톱 앱**: 격리 불가(AppKit). `ai gui --browser`를 쓴다.
 - **Windows GUI**: 범위 밖. 라우터는 WSL CLI를 다루지 Windows 네이티브 앱은 안 다룬다.
 - **Windows와 Linux**: 코드를 읽어 검토했고 macOS 호스트에서 실측하진 않았다.
-- **시작 디렉토리**: `ai claude`와 `ai codex`는 실행 전에 워크스페이스 루트(`~/dev/personal`
-  또는 `~/dev/work`)로 이동한다. 그래서 하위 디렉토리에서 명령을 쳐도 세션은 워크스페이스
-  루트에서 열린다. `ai gui`는 현재 위치를 안 본다.
+- **시작 디렉토리**: `ai claude`와 `ai codex`는 현재 위치가 선택한 워크스페이스 안이면 그
+  자리에서 시작하고, 워크스페이스 밖에서 실행할 때만 루트로 옮긴다(경고와 함께). `ai gui`는
+  현재 위치를 안 본다.
 
 관련: [ARCHITECTURE.md](ARCHITECTURE.md), [PORTABILITY.md](PORTABILITY.md),
 [CODEX-AUTH.md](CODEX-AUTH.md).

@@ -44,7 +44,9 @@ esac
 : "${AI_SHARED:=$HOME/.ai-shared}"
 : "${AI_CLAUDE_APP:=/Applications/Claude.app}"
 : "${AI_CLAUDE_APP_DATA_PREFIX:=$HOME/.claude-app-}"
-: "${AI_GUI_APPS:=claude}"
+: "${AI_CODEX_APP:=/Applications/Codex.app}"        # Electron (ships app.asar) -> honors --user-data-dir
+: "${AI_CODEX_APP_DATA_PREFIX:=$HOME/.codex-app-}"
+: "${AI_GUI_APPS:=claude codex}"
 # Last Claude Code version where the per-dir keychain scheme sha256(abs dir)[:8]
 # was confirmed. doctor soft-warns when the installed version drifts from this.
 : "${AI_CLAUDE_KC_VERIFIED_VER:=2.1.198}"
@@ -76,12 +78,14 @@ cfg_env_name() {
   esac
 }
 
-# Native-isolation registry — Electron apps ONLY. The --user-data-dir mechanism is
-# Chromium-specific; native AppKit apps (e.g. ChatGPT.app) ignore it, so they must NOT
-# be listed here. Future ChatGPT isolation goes through the browser-profile path instead.
+# Native-isolation registry: Electron apps ONLY. The --user-data-dir mechanism is
+# Chromium-specific, so only Chromium/Electron apps belong here. Claude.app and Codex.app
+# are Electron (each ships Contents/Resources/app.asar). Native AppKit apps like ChatGPT.app
+# ignore --user-data-dir and MUST NOT be listed; isolate those via a browser profile instead.
 gui_app_bundle() {  # $1 app name -> bundle path
   case "$1" in
     claude)  print -r -- "$AI_CLAUDE_APP" ;;
+    codex)   print -r -- "$AI_CODEX_APP" ;;
     *) return 1 ;;
   esac
 }
@@ -89,6 +93,7 @@ gui_app_bundle() {  # $1 app name -> bundle path
 gui_app_dataprefix() {  # $1 app name -> data-dir prefix (account appended by caller)
   case "$1" in
     claude)  print -r -- "$AI_CLAUDE_APP_DATA_PREFIX" ;;
+    codex)   print -r -- "$AI_CODEX_APP_DATA_PREFIX" ;;
     *) return 1 ;;
   esac
 }
@@ -412,20 +417,28 @@ run_tool() {  # <tool> <workspace> [--account X] [-- passthrough...]
   wp="$(ws_path "$ws")"; cr="$(cfg_root "$tool" "$account")"; ld="$(log_dir "$ws" "$tool" "$account")"
   mkdir -p "$ld" "$wp"
   check_mismatch "$ws" "$account"
-  check_cwd "$wp"
   check_secrets "$wp"
-  cd "$wp" || { print -r -- "cannot cd to $wp" >&2; return 1; }
+  # Stay in the current dir if it is already inside the workspace; otherwise start at the
+  # workspace root (and say so). Keeps you in-project when you launch from a subdirectory.
+  local launch_dir="$wp"
+  case "$PWD/" in
+    "$wp/"*) launch_dir="$PWD" ;;
+    *) warn "current dir is outside $ws workspace; starting at workspace root:
+      cwd: $PWD
+      ws:  $wp" ;;
+  esac
+  cd "$launch_dir" || { print -r -- "cannot cd to $launch_dir" >&2; return 1; }
 
   local ts transcript; ts="$(date +%Y%m%d-%H%M%S)"; transcript="$ld/session-$ts.log"
   case "$tool" in
     claude)
       export CLAUDE_CONFIG_DIR="$cr"
-      print -r -- "→ claude  CLAUDE_CONFIG_DIR=$cr  cwd=$wp"
+      print -r -- "→ claude  CLAUDE_CONFIG_DIR=$cr  cwd=$PWD"
       print -r -- "  transcript: $transcript"
       _run_with_transcript "$transcript" claude "${passthru[@]}" ;;
     codex)
       export CODEX_HOME="$cr"
-      print -r -- "→ codex   CODEX_HOME=$cr  cwd=$wp"
+      print -r -- "→ codex   CODEX_HOME=$cr  cwd=$PWD"
       print -r -- "  transcript: $transcript"
       print -r -- "  note: Codex internal logs may remain under \$CODEX_HOME/log (follows account, not workspace)."
       _run_with_transcript "$transcript" codex "${passthru[@]}" ;;
