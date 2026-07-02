@@ -1109,6 +1109,62 @@ cmd_keychain() {  # <list|prune> [--force] [--keep DIR ...]
   return 0
 }
 
+_dirmark() { [[ -d "$1" ]] && print -- "(exists)" || print -- "(missing)"; }
+
+# Redacted auth status for a profile (presence/mode only; NEVER token contents).
+_profile_claude_auth() {  # $1 = claude config root
+  local croot="$1" khash ksvc
+  if [[ -f "$croot/.credentials.json" ]]; then print -r -- "file creds (.credentials.json)"; return; fi
+  if [[ "$AI_OS" == macos ]]; then
+    khash="$(claude_keychain_hash "$croot")"; ksvc="Claude Code-credentials-$khash"
+    if [[ -n "$khash" ]] && keychain_service_present "$ksvc"; then print -r -- "keychain entry present"
+    else print -r -- "not logged in (no keychain entry)"; fi
+  else
+    print -r -- "no creds file"
+  fi
+}
+_profile_codex_auth() {  # $1 = codex config root
+  local cxroot="$1" authf="$1/auth.json" store mode
+  store="$(codex_store_pref "$cxroot")"
+  if [[ -f "$authf" ]]; then mode="$(file_mode "$authf")"; print -r -- "file (auth.json mode ${mode:-?})"
+  elif [[ "$store" == keyring ]]; then print -r -- "keyring"
+  else print -r -- "not logged in"; fi
+}
+
+cmd_profiles() {  # list | show <account> — account-centric inventory. Never prints secrets.
+  local sub="${1:-list}"; (( $# )) && shift
+  case "$sub" in
+    list)
+      print -r -- "== ai profiles =="
+      local a wp
+      for a in personal company; do
+        wp="$(ws_path "$a")"
+        print -r -- "[$a]  workspace: $wp $(_dirmark "$wp")"
+        print -r -- "  claude  $(cfg_root claude "$a")   auth: $(_profile_claude_auth "$(cfg_root claude "$a")")"
+        print -r -- "  codex   $(cfg_root codex "$a")    auth: $(_profile_codex_auth "$(cfg_root codex "$a")")"
+      done
+      print -r -- "note: auth = presence only, never token contents. Confirm the live Claude account with /status in-session."
+      ;;
+    show)
+      local a="${1:-}"
+      valid_account "$a" || { print -r -- "usage: ai profiles show <personal|company>" >&2; return 2; }
+      local wp cr gapp gd
+      wp="$(ws_path "$a")"
+      print -r -- "== ai profiles: $a =="
+      print -r -- "workspace:   $wp $(_dirmark "$wp")"
+      cr="$(cfg_root claude "$a")"; print -r -- "claude root: $cr $(_dirmark "$cr")  auth: $(_profile_claude_auth "$cr")"
+      cr="$(cfg_root codex "$a")";  print -r -- "codex root:  $cr $(_dirmark "$cr")  auth: $(_profile_codex_auth "$cr")"
+      for gapp in ${=AI_GUI_APPS}; do
+        gd="$(gui_app_dataprefix "$gapp" 2>/dev/null)" || continue
+        [[ -n "$gd" ]] && { gd="$gd$a"; print -r -- "gui $gapp:    $gd $(_dirmark "$gd")"; }
+      done
+      print -r -- "logs:        $wp/.ai-logs"
+      print -r -- "note: auth = presence only, never token contents."
+      ;;
+    *) print -r -- "usage: ai profiles <list|show [personal|company]>" >&2; return 2 ;;
+  esac
+}
+
 usage() {
   cat <<'EOF'
 ai — AI session router
@@ -1123,6 +1179,7 @@ ai — AI session router
   ai doctor
   ai remote doctor
   ai logs
+  ai profiles [list | show <personal|company>]
   ai resolve <claude|codex> <personal|company> [--account personal|company]
 
 Defaults: account follows workspace. Override with --account.
@@ -1142,6 +1199,7 @@ main() {
     doctor)  cmd_doctor ;;
     remote)  [[ "${1:-}" == doctor ]] && cmd_remote_doctor || { print -r -- "usage: ai remote doctor" >&2; return 2; } ;;
     logs)    cmd_logs ;;
+    profiles) cmd_profiles "$@" ;;
     resolve) cmd_resolve "$@" ;;
     ""|help|-h|--help) usage ;;
     *) print -r -- "unknown command: $cmd" >&2; usage; return 1 ;;

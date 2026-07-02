@@ -33,6 +33,7 @@ ai gui           <personal|company> [--browser] [--dry-run]
 ai gui setup     [--print]
 ai shell|tmux    <personal|company>
 ai resolve <claude|codex> <personal|company> [--account ...]    # dry-run preview
+ai profiles      [list | show <personal|company>]              # account inventory (redacted)
 ai doctor | ai remote doctor | ai logs
 ```
 

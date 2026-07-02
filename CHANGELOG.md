@@ -20,6 +20,12 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 - `ai doctor` per-account auth-isolation checks (Claude Keychain-hash verification, Codex
   auth mode / permission / clone detection) plus `CLAUDE_CODE_OAUTH_TOKEN` /
   `ANTHROPIC_API_KEY` environment warnings.
+- `ai profiles [list | show <account>]`: account-centric inventory of each profile's
+  workspace, config roots, and redacted auth status (presence and file mode only, never
+  token contents).
+- Docs: `THREAT-MODEL.md` (assets, trust boundaries, 7 threats + residual risk) and
+  `SURFACES.md` (per-surface isolation for every OpenAI/Anthropic surface, credentials by
+  OS, Tailscale) with official vendor doc links.
 - Bilingual docs under `docs/en` and `docs/ko` with a Language switcher; new `SUPPORT.md`
   (tool/surface/OS support matrix, mechanisms, official doc links) and `HOW-IT-WORKS.md`.
 - Initial extraction into a standalone, OS-generic project.

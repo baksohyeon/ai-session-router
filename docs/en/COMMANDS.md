@@ -13,6 +13,7 @@ ai keychain <list|prune> [--force] [--keep DIR]            # audit/clean orphane
 ai doctor                                                  # local diagnostic
 ai remote doctor                                           # tailscale / sshd / tmux / host
 ai logs                                                    # list captured transcripts
+ai profiles [list | show <ws>]                             # account inventory (redacted; presence only)
 ai resolve <claude|codex> <ws> [--account p|c]             # DRY-RUN preview (no launch)
 ```
 
