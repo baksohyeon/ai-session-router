@@ -5,6 +5,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.1.0] - 2026-07-03
+
 ### Added
 - `ai zellij <personal|company>`: attach or create a Zellij session `ai-<workspace>`
   using a layout-as-code file (`AI_ZELLIJ_LAYOUT`, default `share/zellij/ai.kdl`). `ai tmux`
