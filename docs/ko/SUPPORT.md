@@ -30,7 +30,7 @@ ai gui setup                 # 브라우저 감지 후 신분별 매핑 작성
 ai claude|codex  <personal|company> [--account personal|company] [-- tool-args...]
 ai gui           <personal|company> [--browser] [--dry-run]
 ai gui setup     [--print]
-ai shell|tmux    <personal|company>
+ai shell|tmux|zellij <personal|company>
 ai resolve <claude|codex> <personal|company> [--account ...]    # dry-run 미리보기
 ai profiles      [list | show <personal|company>]              # 계정 인벤토리 (비밀 없이)
 ai doctor | ai remote doctor | ai logs

@@ -31,7 +31,7 @@ ai gui setup                 # detect browsers, write per-identity mappings
 ai claude|codex  <personal|company> [--account personal|company] [-- tool-args...]
 ai gui           <personal|company> [--browser] [--dry-run]
 ai gui setup     [--print]
-ai shell|tmux    <personal|company>
+ai shell|tmux|zellij <personal|company>
 ai resolve <claude|codex> <personal|company> [--account ...]    # dry-run preview
 ai profiles      [list | show <personal|company>]              # account inventory (redacted)
 ai doctor | ai remote doctor | ai logs

@@ -6,6 +6,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- `ai zellij <personal|company>`: attach or create a Zellij session `ai-<workspace>`
+  using a layout-as-code file (`AI_ZELLIJ_LAYOUT`, default `share/zellij/ai.kdl`). `ai tmux`
+  stays as the ubiquitous remote fallback. `ai doctor` reports zellij availability and
+  `ai remote doctor` lists zellij sessions.
 - Config-driven named profiles via `AI_PROFILES` (space-separated; defaults to
   `personal company`). Every command now accepts any configured name (e.g.
   `ai claude client1`, `ai resolve codex client1`), and `ai doctor` / `ai logs` /

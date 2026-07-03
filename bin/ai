@@ -56,6 +56,9 @@ esac
 # Last Claude Code version where the per-dir keychain scheme sha256(abs dir)[:8]
 # was confirmed. doctor soft-warns when the installed version drifts from this.
 : "${AI_CLAUDE_KC_VERIFIED_VER:=2.1.198}"
+# Zellij layout (layout-as-code) used by `ai zellij`. Defaults to the router's shipped
+# layout, resolved relative to this script; override with your own copy in router.env.
+: "${AI_ZELLIJ_LAYOUT:=${0:A:h:h}/share/zellij/ai.kdl}"
 
 _cfg="${XDG_CONFIG_HOME:-$HOME/.config}/ai-session-router/router.env"
 [[ -f "$_cfg" ]] && source "$_cfg"
@@ -841,6 +844,28 @@ cmd_tmux() {  # personal|company
   if [[ -n "${TMUX:-}" ]]; then tmux switch-client -t "$sess"; else tmux attach-session -t "$sess"; fi
 }
 
+cmd_zellij() {  # personal|company: Zellij session (layout-as-code). tmux stays the remote fallback.
+  local ws="${1:-}"
+  valid_ws "$ws" || { print -r -- "usage: ai zellij <personal|company>" >&2; return 2; }
+  command -v zellij >/dev/null 2>&1 || { print -r -- "zellij not found (use 'ai tmux $ws' as the fallback)" >&2; return 1; }
+  [[ -n "${ZELLIJ:-}" ]] && { warn "already inside a zellij session; open a new terminal to attach 'ai-$ws'."; return 1; }
+  local wp sess; wp="$(ws_path "$ws")"; sess="ai-$ws"; mkdir -p "$wp"
+  cd "$wp" || { print -r -- "cannot cd to $wp" >&2; return 1; }
+  if zellij list-sessions 2>/dev/null | grep -q -- "$sess"; then
+    print -r -- "attaching zellij session: $sess"
+    zellij attach "$sess"
+  else
+    print -r -- "creating zellij session: $sess (cwd $wp)"
+    if [[ -f "$AI_ZELLIJ_LAYOUT" ]]; then
+      print -r -- "  layout: $AI_ZELLIJ_LAYOUT"
+      zellij --session "$sess" --layout "$AI_ZELLIJ_LAYOUT"
+    else
+      warn "layout not found ($AI_ZELLIJ_LAYOUT); starting a default zellij session."
+      zellij --session "$sess"
+    fi
+  fi
+}
+
 cmd_doctor() {
   print -r -- "== ai doctor =="
   print -r -- "OS:      $(_os_label)"
@@ -854,7 +879,7 @@ cmd_doctor() {
   print -r -- ""
   print -r -- "tools:"
   local t p
-  for t in claude codex tmux tailscale; do p="$(command -v "$t" 2>/dev/null)"; print -r -- "  $t: ${p:-NOT FOUND}"; done
+  for t in claude codex tmux zellij tailscale; do p="$(command -v "$t" 2>/dev/null)"; print -r -- "  $t: ${p:-NOT FOUND}"; done
   _has_browser edge   && print -r -- "  Microsoft Edge: present" || print -r -- "  Microsoft Edge: NOT FOUND"
   _has_browser chrome && print -r -- "  Google Chrome: present"  || print -r -- "  Google Chrome: NOT FOUND"
   print -r -- ""
@@ -1124,6 +1149,8 @@ cmd_remote_doctor() {
   fi
   print -r -- "-- sshd listening on :22? --"; print -r -- "  $(_sshd_listening)"
   print -r -- "-- tmux sessions --"; tmux ls 2>/dev/null || print -r -- "  (none)"
+  print -r -- "-- zellij sessions --"
+  if command -v zellij >/dev/null 2>&1; then zellij list-sessions 2>/dev/null || print -r -- "  (none)"; else print -r -- "  (zellij not installed)"; fi
   _report_exposed_listeners
   _report_tailscale_exposure "$tp"
   print -r -- "-- control-plane exposure notes --"
@@ -1336,7 +1363,8 @@ ai: AI session router
   ai shell   <personal|company>
   ai claude  <personal|company> [--account personal|company] [-- args...]
   ai codex   <personal|company> [--account personal|company] [-- args...]
-  ai tmux    <personal|company>
+  ai tmux    <personal|company>                                 (ubiquitous / remote fallback)
+  ai zellij  <personal|company>                                 (modern; layout-as-code)
   ai keychain <list|prune> [--force] [--yes] [--keep DIR ...]   (prune is dry-run unless --force; --force prompts unless --yes)
   ai doctor
   ai remote doctor
@@ -1357,6 +1385,7 @@ main() {
     claude)  run_tool claude "$@" ;;
     codex)   run_tool codex "$@" ;;
     tmux)    cmd_tmux "$@" ;;
+    zellij)  cmd_zellij "$@" ;;
     keychain) cmd_keychain "$@" ;;
     doctor)  cmd_doctor ;;
     remote)  [[ "${1:-}" == doctor ]] && cmd_remote_doctor || { print -r -- "usage: ai remote doctor" >&2; return 2; } ;;
