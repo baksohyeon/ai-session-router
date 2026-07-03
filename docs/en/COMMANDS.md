@@ -90,7 +90,10 @@ Recommended flow: run `ai keychain list`, eyeball the orphans, then `ai keychain
   roots (exists/missing), per-account auth isolation (verified Keychain entry on macOS),
   a keychain-scheme version guard, example log resolution, config file in use. For the
   GUI it also reports the resolved browser per identity, the mechanism (data-dir vs
-  profile), and the resolved data-dir / profile with exists/missing status.
+  profile), and the resolved data-dir / profile with exists/missing status. It also
+  reports account content (skills / plugin marketplaces / config presence, never
+  secrets) and warns when an account is logged in but unpopulated (0 skills), which
+  otherwise silently starts empty.
 - `ai remote doctor`: hostname, user, Tailscale status/IP, sshd listening check,
   tmux sessions, plus read-only control-plane exposure checks (T5): TCP listeners
   bound off-loopback, agent control planes flagged as WARNINGs, and a HIGH-RISK

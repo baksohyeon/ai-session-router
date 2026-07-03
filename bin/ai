@@ -967,6 +967,31 @@ cmd_doctor() {
     fi
   fi
   print -r -- "  note: ChatGPT web account switching (max 2 accounts) does NOT apply to Codex: each Codex account needs its own CODEX_HOME + login, which is exactly what the router pins."
+  # Account content: an account can be logged in yet be a hollow shell (0 skills, near-empty
+  # config) so it starts with nothing. auth-present + skills=0 is the codex-company failure mode.
+  print -r -- "account content (skills/plugins/config presence, not secrets):"
+  local pt pa proot pcounts pok
+  for pt in claude codex; do
+    for pa in ${=AI_PROFILES}; do
+      proot="$(cfg_root "$pt" "$pa")"
+      if [[ ! -d "$proot" ]]; then
+        print -r -- "  $pt/$pa: config root missing ($proot); create it with: ai $pt $pa"
+        continue
+      fi
+      pcounts="$(_content_counts "$pt" "$proot")"; pok=$?   # plain assignment: $? is _content_counts's rc
+      if (( pok == 0 )); then
+        print -r -- "  $pt/$pa: $pcounts ✓"
+      else
+        if { [[ "$pt" == claude ]] && _claude_auth_present "$proot"; } || \
+           { [[ "$pt" == codex  ]] && _codex_auth_present  "$proot"; }; then
+          print -r -- "  $pt/$pa: $pcounts"
+          warn "$pt/$pa is logged in but unpopulated (0 skills): it will start empty. Copy content from another account, e.g. cp -Rp \"$(cfg_root "$pt" personal)/skills\" \"$proot/skills\" (never copy auth.json)."
+        else
+          print -r -- "  $pt/$pa: $pcounts (not logged in; set up with: ai $pt $pa)"
+        fi
+      fi
+    done
+  done
   if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
     print -r -- "  ⚠ CLAUDE_CODE_OAUTH_TOKEN set in env: a token-based Claude launch can delete the shared macOS Keychain entry on exit (issue #37512); unset for subscription-OAuth sessions."
   fi
@@ -1312,6 +1337,43 @@ cmd_keychain() {  # <list|prune> [--force] [--keep DIR ...]
 
 _dirmark() { [[ -d "$1" ]] && print -- "(exists)" || print -- "(missing)"; }
 
+# Auth-presence predicates (presence only; NEVER token contents). rc 0 = present.
+_claude_auth_present() {  # $1 = claude config root
+  local croot="$1" khash ksvc
+  [[ -f "$croot/.credentials.json" ]] && return 0
+  if [[ "$AI_OS" == macos ]]; then
+    khash="$(claude_keychain_hash "$croot")"; ksvc="Claude Code-credentials-$khash"
+    [[ -n "$khash" ]] && keychain_service_present "$ksvc" && return 0
+  fi
+  return 1
+}
+_codex_auth_present() {  # $1 = codex config root
+  local cxroot="$1"
+  [[ -f "$cxroot/auth.json" ]] && return 0
+  [[ "$(codex_store_pref "$cxroot")" == keyring ]] && return 0
+  return 1
+}
+
+# Content inventory for a config root (counts only; follows symlinks like the shared store).
+# Prints a compact "skills=N ..." summary. rc 0 = has skills, rc 1 = looks unpopulated.
+# An account with auth but 0 skills is a hollow shell (the codex-company failure mode).
+_content_counts() {  # $1 = tool, $2 = config root
+  local tool="$1" root="$2" nskills=0 detail=""
+  [[ -d "$root/skills" ]] && nskills=$(ls -1 "$root/skills" 2>/dev/null | wc -l | tr -d ' ')
+  case "$tool" in
+    claude)
+      local nmkt=0
+      [[ -d "$root/plugins/marketplaces" ]] && nmkt=$(ls -1 "$root/plugins/marketplaces" 2>/dev/null | wc -l | tr -d ' ')
+      detail="skills=$nskills plugins-marketplaces=$nmkt" ;;
+    codex)
+      local cfgl=0
+      [[ -f "$root/config.toml" ]] && cfgl=$(wc -l < "$root/config.toml" 2>/dev/null | tr -d ' ')
+      detail="skills=$nskills config.toml=${cfgl}L" ;;
+  esac
+  print -r -- "$detail"
+  [[ "${nskills:-0}" -gt 0 ]]
+}
+
 # Redacted auth status for a profile (presence/mode only; NEVER token contents).
 _profile_claude_auth() {  # $1 = claude config root
   local croot="$1" khash ksvc
@@ -1337,12 +1399,13 @@ cmd_profiles() {  # list | show <account> (account-centric inventory). Never pri
   case "$sub" in
     list)
       print -r -- "== ai profiles =="
-      local a wp
+      local a wp ccr cxr
       for a in ${=AI_PROFILES}; do
         wp="$(ws_path "$a")"
+        ccr="$(cfg_root claude "$a")"; cxr="$(cfg_root codex "$a")"
         print -r -- "[$a]  workspace: $wp $(_dirmark "$wp")"
-        print -r -- "  claude  $(cfg_root claude "$a")   auth: $(_profile_claude_auth "$(cfg_root claude "$a")")"
-        print -r -- "  codex   $(cfg_root codex "$a")    auth: $(_profile_codex_auth "$(cfg_root codex "$a")")"
+        print -r -- "  claude  $ccr   auth: $(_profile_claude_auth "$ccr")   $(_content_counts claude "$ccr")"
+        print -r -- "  codex   $cxr    auth: $(_profile_codex_auth "$cxr")   $(_content_counts codex "$cxr")"
       done
       print -r -- "note: auth = presence only, never token contents. Confirm the live Claude account with /status in-session."
       ;;
@@ -1353,8 +1416,8 @@ cmd_profiles() {  # list | show <account> (account-centric inventory). Never pri
       wp="$(ws_path "$a")"
       print -r -- "== ai profiles: $a =="
       print -r -- "workspace:   $wp $(_dirmark "$wp")"
-      cr="$(cfg_root claude "$a")"; print -r -- "claude root: $cr $(_dirmark "$cr")  auth: $(_profile_claude_auth "$cr")"
-      cr="$(cfg_root codex "$a")";  print -r -- "codex root:  $cr $(_dirmark "$cr")  auth: $(_profile_codex_auth "$cr")"
+      cr="$(cfg_root claude "$a")"; print -r -- "claude root: $cr $(_dirmark "$cr")  auth: $(_profile_claude_auth "$cr")  content: $(_content_counts claude "$cr")"
+      cr="$(cfg_root codex "$a")";  print -r -- "codex root:  $cr $(_dirmark "$cr")  auth: $(_profile_codex_auth "$cr")  content: $(_content_counts codex "$cr")"
       for gapp in ${=AI_GUI_APPS}; do
         gd="$(gui_app_dataprefix "$gapp" 2>/dev/null)" || continue
         [[ -n "$gd" ]] && { gd="$gd$a"; print -r -- "gui $gapp:    $gd $(_dirmark "$gd")"; }

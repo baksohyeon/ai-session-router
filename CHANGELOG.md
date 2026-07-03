@@ -5,6 +5,14 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+
+- `ai doctor` and `ai profiles` now report per-account content (skills count,
+  plugin marketplaces, config presence, never secrets) and `ai doctor` warns when
+  an account is logged in but unpopulated (0 skills). This surfaces the hollow-shell
+  failure mode (auth present, empty content) that otherwise stays hidden until an
+  account starts with no skills or config.
+
 ### Changed
 
 - `ai gui` no longer launches the Codex desktop app. Codex resolves its account,
