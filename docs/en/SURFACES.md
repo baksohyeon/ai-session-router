@@ -16,7 +16,7 @@ vendor behavior changes, so verify at your version.
 | ChatGPT web | partial | server-side account; ChatGPT's own switcher holds up to 2 accounts, or use a dedicated browser profile per identity |
 | ChatGPT mobile | no | native app, one account at a time; no router reach |
 | Codex CLI | yes | `CODEX_HOME` per account (`auth.json` plaintext in-dir) |
-| Codex desktop app | yes | Electron; `ai gui` launches it with `--user-data-dir` per account |
+| Codex desktop app | no (CLI-first) | reads `CODEX_HOME`, not `--user-data-dir`; use `ai codex <account>` |
 | Codex Remote (phone drives host) | no, host-pinned | host must be signed into the same ChatGPT account and workspace |
 | Codex `app-server` | transport, not isolated | powers rich clients; WebSocket mode experimental, never expose unauthenticated |
 

@@ -16,7 +16,7 @@
 | ChatGPT web | 부분 | 서버 쪽 계정. ChatGPT 자체 전환기는 계정 2개까지 담고, 그 이상은 신원마다 별도 브라우저 프로필을 쓴다 |
 | ChatGPT mobile | 안 됨 | 네이티브 앱, 한 번에 한 계정. 라우터가 손댈 수 없다 |
 | Codex CLI | 됨 | 계정마다 `CODEX_HOME` (디렉터리 안 `auth.json` 평문) |
-| Codex desktop app | 됨 | Electron. `ai gui`가 계정마다 `--user-data-dir`를 붙여 실행한다 |
+| Codex desktop app | 안 됨 (CLI-first) | Codex는 `CODEX_HOME`에서 읽지 `--user-data-dir`가 아니다. `ai codex <account>`를 써라 |
 | Codex Remote (phone drives host) | 안 됨, 호스트에 고정 | 호스트가 같은 ChatGPT 계정과 워크스페이스로 로그인돼 있어야 한다 |
 | Codex `app-server` | 전송 계층, 격리 아님 | 리치 클라이언트를 구동한다. WebSocket 모드는 실험적이며, 인증 없이 절대 노출하지 말 것 |
 

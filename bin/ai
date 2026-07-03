@@ -50,9 +50,11 @@ esac
 : "${AI_SHARED:=$HOME/.ai-shared}"
 : "${AI_CLAUDE_APP:=/Applications/Claude.app}"
 : "${AI_CLAUDE_APP_DATA_PREFIX:=$HOME/.claude-app-}"
-: "${AI_CODEX_APP:=/Applications/Codex.app}"        # Electron (ships app.asar) -> honors --user-data-dir
-: "${AI_CODEX_APP_DATA_PREFIX:=$HOME/.codex-app-}"
-: "${AI_GUI_APPS:=claude codex}"
+# Codex desktop app is intentionally NOT gui-isolated. Codex reads its account, config,
+# plugins, and skills from CODEX_HOME, not from an Electron --user-data-dir, so isolating
+# the shell does nothing for the account. Codex is CLI-first: `ai codex <account>` sets
+# CODEX_HOME. ChatGPT.app (native AppKit) also cannot be isolated. So gui native = Claude only.
+: "${AI_GUI_APPS:=claude}"
 # Last Claude Code version where the per-dir keychain scheme sha256(abs dir)[:8]
 # was confirmed. doctor soft-warns when the installed version drifts from this.
 : "${AI_CLAUDE_KC_VERIFIED_VER:=2.1.198}"
@@ -92,14 +94,14 @@ cfg_env_name() {
   esac
 }
 
-# Native-isolation registry: Electron apps ONLY. The --user-data-dir mechanism is
-# Chromium-specific, so only Chromium/Electron apps belong here. Claude.app and Codex.app
-# are Electron (each ships Contents/Resources/app.asar). Native AppKit apps like ChatGPT.app
-# ignore --user-data-dir and MUST NOT be listed; isolate those via a browser profile instead.
+# Native-isolation registry: Claude.app only. --user-data-dir isolates a Chromium/Electron
+# shell, which works for Claude.app (it embeds Claude Code and reads its state from that dir).
+# Codex.app is Electron too, but reads config/plugins/skills/account from CODEX_HOME, so
+# --user-data-dir does NOT isolate the Codex account; Codex stays CLI-first (`ai codex`).
+# Native AppKit apps like ChatGPT.app ignore the flag entirely. Isolate non-Claude via browser.
 gui_app_bundle() {  # $1 app name -> bundle path
   case "$1" in
     claude)  print -r -- "$AI_CLAUDE_APP" ;;
-    codex)   print -r -- "$AI_CODEX_APP" ;;
     *) return 1 ;;
   esac
 }
@@ -107,7 +109,6 @@ gui_app_bundle() {  # $1 app name -> bundle path
 gui_app_dataprefix() {  # $1 app name -> data-dir prefix (account appended by caller)
   case "$1" in
     claude)  print -r -- "$AI_CLAUDE_APP_DATA_PREFIX" ;;
-    codex)   print -r -- "$AI_CODEX_APP_DATA_PREFIX" ;;
     *) return 1 ;;
   esac
 }

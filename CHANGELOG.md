@@ -5,7 +5,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
-_Nothing yet._
+### Changed
+
+- `ai gui` no longer launches the Codex desktop app. Codex resolves its account,
+  config, plugins, and skills from `CODEX_HOME`, not from an Electron
+  `--user-data-dir`, so isolating the Electron shell did nothing for the account
+  (and only cluttered the dock). Codex is now CLI-first via `ai codex <account>`,
+  which sets `CODEX_HOME` for real isolation. `AI_GUI_APPS` defaults to `claude`.
+
+### Removed
+
+- `AI_CODEX_APP` and `AI_CODEX_APP_DATA_PREFIX` config vars (no longer read;
+  Codex desktop is not gui-isolated). See the note above.
 
 ## [0.1.1] - 2026-07-03
 
