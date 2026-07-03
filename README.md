@@ -68,11 +68,16 @@ Full reference: [docs/en/COMMANDS.md](docs/en/COMMANDS.md). Summary:
 
 ```
 ai gui|shell|tmux   <personal|company>
+ai zellij           <personal|company>                         # optional modern multiplexer (tmux = fallback)
 ai gui setup [--print]                                         # detect browsers, write per-identity mappings
 ai claude|codex     <personal|company> [--account personal|company] [-- tool-args...]
 ai resolve <claude|codex> <personal|company> [--account ...]   # dry-run preview
+ai profiles [list | show <personal|company>]                   # account inventory (redacted)
 ai doctor | ai remote doctor | ai logs
 ```
+
+Accounts are config-driven: the built-in `personal`/`company` extend to any name via
+`AI_PROFILES` (see [docs/en/COMMANDS.md](docs/en/COMMANDS.md)).
 
 ## Platform support
 
