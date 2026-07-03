@@ -9,7 +9,7 @@ ai shell   <personal|company>                              # subshell cd'd into 
 ai claude  <personal|company> [--account p|c] [-- args]    # launch Claude Code
 ai codex   <personal|company> [--account p|c] [-- args]    # launch Codex
 ai tmux    <personal|company>                              # attach/create ai-<ws> session
-ai zellij  <personal|company>                              # Zellij session (layout-as-code); tmux = fallback
+ai zellij  <personal|company>                              # optional Zellij session (brew install zellij); tmux = fallback
 ai keychain <list|prune> [--force] [--keep DIR]            # audit/clean orphaned Claude keychain creds (macOS)
 ai doctor                                                  # local diagnostic
 ai remote doctor                                           # tailscale / sshd / tmux / host

@@ -844,10 +844,20 @@ cmd_tmux() {  # personal|company
   if [[ -n "${TMUX:-}" ]]; then tmux switch-client -t "$sess"; else tmux attach-session -t "$sess"; fi
 }
 
+# Optional-tool install guidance for Zellij (a modern, tmux-like multiplexer).
+_zellij_install_hint() {
+  print -r -- "  install (optional):  brew install zellij   |   cargo install --locked zellij"
+  print -r -- "  docs:                https://zellij.dev/documentation/installation"
+}
+
 cmd_zellij() {  # personal|company: Zellij session (layout-as-code). tmux stays the remote fallback.
   local ws="${1:-}"
   valid_ws "$ws" || { print -r -- "usage: ai zellij <personal|company>" >&2; return 2; }
-  command -v zellij >/dev/null 2>&1 || { print -r -- "zellij not found (use 'ai tmux $ws' as the fallback)" >&2; return 1; }
+  command -v zellij >/dev/null 2>&1 || {
+    print -r -- "zellij not found (optional). Install it, or use 'ai tmux $ws' now:" >&2
+    _zellij_install_hint >&2
+    return 1
+  }
   [[ -n "${ZELLIJ:-}" ]] && { warn "already inside a zellij session; open a new terminal to attach 'ai-$ws'."; return 1; }
   local wp sess; wp="$(ws_path "$ws")"; sess="ai-$ws"; mkdir -p "$wp"
   cd "$wp" || { print -r -- "cannot cd to $wp" >&2; return 1; }
@@ -880,6 +890,7 @@ cmd_doctor() {
   print -r -- "tools:"
   local t p
   for t in claude codex tmux zellij tailscale; do p="$(command -v "$t" 2>/dev/null)"; print -r -- "  $t: ${p:-NOT FOUND}"; done
+  command -v zellij >/dev/null 2>&1 || _zellij_install_hint
   _has_browser edge   && print -r -- "  Microsoft Edge: present" || print -r -- "  Microsoft Edge: NOT FOUND"
   _has_browser chrome && print -r -- "  Google Chrome: present"  || print -r -- "  Google Chrome: NOT FOUND"
   print -r -- ""

@@ -9,7 +9,7 @@ ai shell   <personal|company>                              # 워크스페이스�
 ai claude  <personal|company> [--account p|c] [-- args]    # Claude Code 실행
 ai codex   <personal|company> [--account p|c] [-- args]    # Codex 실행
 ai tmux    <personal|company>                              # ai-<ws> 세션 attach/생성
-ai zellij  <personal|company>                              # Zellij 세션 (layout-as-code); tmux = 원격 폴백
+ai zellij  <personal|company>                              # 선택: Zellij 세션 (brew install zellij); tmux = 폴백
 ai keychain <list|prune> [--force] [--keep DIR]            # 남은 Claude 키체인 인증 정보 점검/정리 (macOS)
 ai doctor                                                  # 로컬 진단
 ai remote doctor                                           # tailscale / sshd / tmux / 호스트
