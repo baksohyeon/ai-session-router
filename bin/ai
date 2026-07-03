@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
-# ai — AI session router (generic / cross-platform)
+# ai: AI session router (generic / cross-platform)
 #
 # Launches Claude Code / Codex with a deliberate combination of:
 #   workspace -> files + logs            (cd into it; logs under <ws>/.ai-logs/)
@@ -41,7 +41,7 @@ esac
 # AI_BROWSER_DATA_PREFIX: prefix for per-identity isolated user-data dirs; router appends <id>.
 : "${AI_BROWSER:=Microsoft Edge}"
 : "${AI_BROWSER_DATA_PREFIX:=$HOME/.ai-browser-}"
-# Legacy vars — honored as fallbacks for pre-generic configs. AI_CHROME_COMPANY_PROFILE
+# Legacy vars, honored as fallbacks for pre-generic configs. AI_CHROME_COMPANY_PROFILE
 # defaults EMPTY: a fresh install (no legacy var) uses the isolated-data-dir default,
 # while an existing config that set it keeps company on Chrome + that profile.
 : "${AI_CHROME_COMPANY_PROFILE:=}"
@@ -114,7 +114,7 @@ log_dir() {  # $1 workspace, $2 tool, $3 account
 }
 
 # Codex auth-store preference. Reads ONLY the config KEY value (file|keyring|auto)
-# from config.toml — never auth.json, never token contents. $1 = codex config root.
+# from config.toml, never auth.json, never token contents. $1 = codex config root.
 codex_store_pref() {
   local cfg="$1/config.toml" v=""
   if [[ -f "$cfg" ]]; then
@@ -131,7 +131,7 @@ file_mode() {
 
 # Claude Code (macOS) derives a per-CLAUDE_CONFIG_DIR Keychain service name by
 # suffixing "Claude Code-credentials-" with sha256(abs config-dir path)[:8].
-# UNDOCUMENTED and version-dependent — verified on Claude Code 2.1.198 — so the
+# UNDOCUMENTED and version-dependent (verified on Claude Code 2.1.198), so the
 # router VERIFIES the entry rather than assuming it. $1 = config dir. Empty if
 # shasum is unavailable. (Default ~/.claude uses the bare, unsuffixed name.)
 claude_keychain_hash() {  # $1 config dir
@@ -140,7 +140,7 @@ claude_keychain_hash() {  # $1 config dir
 }
 
 # True iff a Keychain generic-password service exists. Reads ONLY item presence
-# (no -w) — the secret is never fetched. $1 = service name. macOS only.
+# (no -w): the secret is never fetched. $1 = service name. macOS only.
 keychain_service_present() {  # $1 service
   [[ "$AI_OS" == macos ]] || return 1
   command -v security >/dev/null 2>&1 || return 1
@@ -270,7 +270,7 @@ _browser_first_detected() {
   return 1
 }
 
-_has_browser() {  # $1 = edge|chrome|brave|arc|chromium — back-compat predicate
+_has_browser() {  # $1 = edge|chrome|brave|arc|chromium (back-compat predicate)
   local app
   case "$1" in
     edge)     app="$(_browser_macos_app edge)" ;;
@@ -310,11 +310,11 @@ _launch_browser_profile() {  # $1 target, $2 profile, rest = urls
   _launch_browser "$target" --profile-directory="$profile" "$@"
 }
 
-_has_app_bundle() {  # $1 = /Applications/Foo.app — macOS .app bundles are directories
+_has_app_bundle() {  # $1 = /Applications/Foo.app (macOS .app bundles are directories)
   [[ "$AI_OS" == macos && -d "$1" ]]
 }
 
-_launch_app_isolated() {  # $1 bundle, $2 data-dir — new isolated instance (macOS)
+_launch_app_isolated() {  # $1 bundle, $2 data-dir (new isolated instance, macOS)
   mkdir -p "$2"
   open -n -a "$1" --args --user-data-dir="$2"
 }
@@ -341,7 +341,7 @@ _sshd_listening() {  # echoes a human string
   fi
 }
 
-_run_with_transcript() {  # <transcript> <cmd> [args...] — preserve TTY via script(1)
+_run_with_transcript() {  # <transcript> <cmd> [args...] (preserve TTY via script(1))
   local transcript="$1"; shift
   if command -v script >/dev/null 2>&1; then
     case "$AI_OS" in
@@ -380,7 +380,7 @@ check_cwd() {  # workspace path
   esac
 }
 
-check_secrets() {  # workspace path — names only, contents NEVER read
+check_secrets() {  # workspace path (names only, contents NEVER read)
   setopt local_options null_glob
   local f
   for f in "$1"/.env "$1"/.env.* "$1"/*.pem "$1"/*.key "$1"/*.p12 \
@@ -657,7 +657,7 @@ _setup_detect_browsers() {
   done
 }
 
-# `ai gui setup` — interactive one-time config helper. --print = dry-run (show the
+# `ai gui setup`: interactive one-time config helper. --print = dry-run (show the
 # lines that would be written; touch nothing). Defensive: unreadable Local State
 # degrades to isolated data-dir mode for that identity.
 cmd_gui_setup() {  # [--print]
@@ -876,15 +876,15 @@ cmd_doctor() {
   for acct in ${=AI_PROFILES}; do
     croot="$(cfg_root claude "$acct")"
     if [[ -f "$croot/.credentials.json" ]]; then
-      # Linux/Windows (or a macOS build that ever writes a file) — creds live in-dir.
-      print -r -- "  claude/$acct: file creds in config root (.credentials.json) — isolated by CLAUDE_CONFIG_DIR ✓"
+      # Linux/Windows (or a macOS build that ever writes a file): creds live in-dir.
+      print -r -- "  claude/$acct: file creds in config root (.credentials.json), isolated by CLAUDE_CONFIG_DIR ✓"
     elif [[ "$AI_OS" == macos ]]; then
       khash="$(claude_keychain_hash "$croot")"; ksvc="Claude Code-credentials-$khash"
       if [[ -n "$khash" ]] && keychain_service_present "$ksvc"; then
-        print -r -- "  claude/$acct: Keychain entry '$ksvc' present — CLAUDE_CONFIG_DIR isolates auth on this Claude Code version (per-dir keychain hash) ✓"
-        print -r -- "               (undocumented + version-dependent; confirms an isolated store exists, not which account — use /status. Re-verify after Claude upgrades.)"
+        print -r -- "  claude/$acct: Keychain entry '$ksvc' present: CLAUDE_CONFIG_DIR isolates auth on this Claude Code version (per-dir keychain hash) ✓"
+        print -r -- "               (undocumented + version-dependent; confirms an isolated store exists, not which account; use /status. Re-verify after Claude upgrades.)"
       else
-        print -r -- "  claude/$acct: no isolated Keychain entry for this root yet — log in: ai claude $acct  (then /login)."
+        print -r -- "  claude/$acct: no isolated Keychain entry for this root yet. log in: ai claude $acct  (then /login)."
         print -r -- "               If a future Claude version drops per-dir keychain hashing, this stays empty even when logged in; confirm the active account via /status in-session."
       fi
     else
@@ -898,43 +898,43 @@ cmd_doctor() {
       if [[ "$cver" == "$AI_CLAUDE_KC_VERIFIED_VER" ]]; then
         print -r -- "  keychain hash scheme: verified for Claude Code $cver ✓"
       else
-        print -r -- "  note: Claude Code $cver differs from keychain-scheme-verified $AI_CLAUDE_KC_VERIFIED_VER — if any account above shows 'no isolated keychain entry' despite being logged in, the per-dir hash scheme may have changed; re-verify with: ai keychain list"
+        print -r -- "  note: Claude Code $cver differs from keychain-scheme-verified $AI_CLAUDE_KC_VERIFIED_VER: if any account above shows 'no isolated keychain entry' despite being logged in, the per-dir hash scheme may have changed; re-verify with: ai keychain list"
       fi
     fi
   fi
-  # Codex auth mode per account — presence + declared store, never token contents.
+  # Codex auth mode per account: presence + declared store, never token contents.
   local ca cxroot store authf mode
   for ca in ${=AI_PROFILES}; do
     cxroot="$(cfg_root codex "$ca")"; authf="$cxroot/auth.json"; store="$(codex_store_pref "$cxroot")"
     if [[ -f "$authf" ]]; then
-      print -r -- "  codex/$ca: file-backed creds present (auth.json) — isolated by CODEX_HOME ✓"
+      print -r -- "  codex/$ca: file-backed creds present (auth.json), isolated by CODEX_HOME ✓"
       mode="$(file_mode "$authf")"
       [[ -n "$mode" && "$mode" != 600 && "$mode" != 400 ]] && \
-        warn "codex/$ca auth.json mode $mode — treat like a password; run: chmod 600 \"$authf\""
+        warn "codex/$ca auth.json mode $mode: treat like a password; run: chmod 600 \"$authf\""
     elif [[ "$store" == keyring ]]; then
-      print -r -- "  codex/$ca: keyring-backed (cli_auth_credentials_store=keyring) — CODEX_HOME isolates config/history, but the OS keyring entry may be shared; confirm with: ai codex $ca -- login status"
+      print -r -- "  codex/$ca: keyring-backed (cli_auth_credentials_store=keyring): CODEX_HOME isolates config/history, but the OS keyring entry may be shared; confirm with: ai codex $ca -- login status"
     else
-      print -r -- "  codex/$ca: not logged in (store=$store) — log in with: ai codex $ca -- login"
+      print -r -- "  codex/$ca: not logged in (store=$store). log in with: ai codex $ca -- login"
     fi
   done
-  # Cloned auth.json is a footgun — refresh tokens are single-use and go stale.
+  # Cloned auth.json is a footgun: refresh tokens are single-use and go stale.
   local cx_p cx_c h_p h_c
   cx_p="$(cfg_root codex personal)/auth.json"; cx_c="$(cfg_root codex company)/auth.json"
   if [[ -f "$cx_p" && -f "$cx_c" ]] && command -v shasum >/dev/null 2>&1; then
     h_p="$(shasum -a 256 "$cx_p" 2>/dev/null | awk '{print $1}')"
     h_c="$(shasum -a 256 "$cx_c" 2>/dev/null | awk '{print $1}')"
     if [[ -n "$h_p" && "$h_p" == "$h_c" ]]; then
-      print -r -- "  codex: personal & company auth.json IDENTICAL ⚠ (cloned — re-login one account separately)"
+      print -r -- "  codex: personal & company auth.json IDENTICAL ⚠ (cloned; re-login one account separately)"
     else
       print -r -- "  codex: personal/company auth.json distinct (isolated ✓)"
     fi
   fi
-  print -r -- "  note: ChatGPT web account switching (max 2 accounts) does NOT apply to Codex — each Codex account needs its own CODEX_HOME + login, which is exactly what the router pins."
+  print -r -- "  note: ChatGPT web account switching (max 2 accounts) does NOT apply to Codex: each Codex account needs its own CODEX_HOME + login, which is exactly what the router pins."
   if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
-    print -r -- "  ⚠ CLAUDE_CODE_OAUTH_TOKEN set in env — a token-based Claude launch can delete the shared macOS Keychain entry on exit (issue #37512); unset for subscription-OAuth sessions."
+    print -r -- "  ⚠ CLAUDE_CODE_OAUTH_TOKEN set in env: a token-based Claude launch can delete the shared macOS Keychain entry on exit (issue #37512); unset for subscription-OAuth sessions."
   fi
   if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-    print -r -- "  ⚠ ANTHROPIC_API_KEY set in env — it OUTRANKS subscription OAuth in Claude Code's auth precedence; a claude launch may silently bill the API key instead of your plan. unset it for subscription sessions."
+    print -r -- "  ⚠ ANTHROPIC_API_KEY set in env: it OUTRANKS subscription OAuth in Claude Code's auth precedence; a claude launch may silently bill the API key instead of your plan. unset it for subscription sessions."
   fi
   print -r -- "gui desktop apps:"
   local gapp gbundle gd
@@ -1017,7 +1017,7 @@ _report_exposed_listeners() {
     if ! command -v lsof >/dev/null 2>&1; then
       print -r -- "  (lsof unavailable; cannot enumerate listeners)"; return 0
     fi
-    # -nP: no name/port resolution. -Fpcn: parse-friendly output — p=pid, c=command,
+    # -nP: no name/port resolution. -Fpcn: parse-friendly output: p=pid, c=command,
     # n=name (addr:port). We deliberately request ONLY these fields; args are never emitted.
     local proc="" line f val addr port
     # lsof -F emits records; a new "p" line starts a new process block.
@@ -1047,7 +1047,7 @@ _report_exposed_listeners() {
       print -r -- "  (ss unavailable; cannot enumerate listeners)"; return 0
     fi
     # -ltnH: listening, tcp, numeric, no header. Local-address is field 4 (addr:port),
-    # process info (field 6) carries only the program name we extract — no args.
+    # process info (field 6) carries only the program name we extract, no args.
     local laddr proc addr port pinfo
     while IFS= read -r line; do
       [[ -n "$line" ]] || continue
@@ -1091,7 +1091,7 @@ _report_tailscale_exposure() {  # $1 = tailscale path (may be empty)
     if [[ -z "$funnel" || "$funnel" == *"No serve config"* || "$funnel" == *"Funnel is not"* ]]; then
       print -r -- "  Funnel not active ✓"
     else
-      print -r -- "  ⚠️  HIGH RISK: Tailscale Funnel is ACTIVE — whatever is behind it is on the"
+      print -r -- "  ⚠️  HIGH RISK: Tailscale Funnel is ACTIVE: whatever is behind it is on the"
       print -r -- "     PUBLIC INTERNET. Never expose an unauthenticated agent control plane"
       print -r -- "     (Codex app-server, MCP server, local web UI) through Funnel."
       print -r -- "$funnel" | sed 's/^/     /'
@@ -1147,7 +1147,7 @@ cmd_logs() {
   done
 }
 
-# Build the "keep set" — hashes of config dirs that must NEVER be pruned. Maps
+# Build the "keep set": hashes of config dirs that must NEVER be pruned. Maps
 # hash -> dir for existing dirs so list can name an active entry's owner. The bare
 # ~/.claude entry is kept unconditionally (handled by caller, not hashed here).
 # $@ = extra --keep dirs to whitelist. Populates the assoc array named _keep_map.
@@ -1219,7 +1219,7 @@ cmd_keychain() {  # <list|prune> [--force] [--keep DIR ...]
         [[ "$sub" == list ]] && print -r -- "  $svc  ->  orphan (no matching config dir)"
       fi
     fi
-    # Anything not matching the exact patterns above is ignored — never touched.
+    # Anything not matching the exact patterns above is ignored, never touched.
   done
 
   if [[ "$sub" == list ]]; then
@@ -1235,10 +1235,10 @@ cmd_keychain() {  # <list|prune> [--force] [--keep DIR ...]
     return 0
   fi
   # Fail CLOSED: 0 active entries almost always means the keep-set failed to resolve
-  # (bad HOME, devcontainer, moved/renamed dirs) — in which case EVERY live entry looks
+  # (bad HOME, devcontainer, moved/renamed dirs), in which case EVERY live entry looks
   # orphaned. Refuse to delete rather than wipe real credentials. (#security-F1)
   if (( force && nactive == 0 )); then
-    print -r -- "ai keychain: refusing to prune — 0 active entries detected but $norphan candidate(s) found." >&2
+    print -r -- "ai keychain: refusing to prune: 0 active entries detected but $norphan candidate(s) found." >&2
     print -r -- "  This usually means HOME / AI_CLAUDE_ROOT_PREFIX don't resolve here (devcontainer, moved dirs)," >&2
     print -r -- "  not that $norphan accounts are genuinely stale. Inspect with 'ai keychain list', or pass" >&2
     print -r -- "  --keep DIR for each live account, then retry." >&2
@@ -1250,7 +1250,7 @@ cmd_keychain() {  # <list|prune> [--force] [--keep DIR ...]
     # returns non-zero → treated as "no" → nothing is deleted. (#security-F2)
     if (( ! assume_yes )); then
       print -r -- "about to DELETE $norphan orphaned keychain entry(s); keeping $kept ($nactive active + $nbare default)."
-      if ! read -q "?proceed? [y/N] "; then print -r -- ""; print -r -- "aborted — no changes."; return 1; fi
+      if ! read -q "?proceed? [y/N] "; then print -r -- ""; print -r -- "aborted, no changes."; return 1; fi
       print -r -- ""
     fi
     for o in "${orphans[@]}"; do
@@ -1293,7 +1293,7 @@ _profile_codex_auth() {  # $1 = codex config root
   else print -r -- "not logged in"; fi
 }
 
-cmd_profiles() {  # list | show <account> — account-centric inventory. Never prints secrets.
+cmd_profiles() {  # list | show <account> (account-centric inventory). Never prints secrets.
   local sub="${1:-list}"; (( $# )) && shift
   case "$sub" in
     list)
@@ -1329,7 +1329,7 @@ cmd_profiles() {  # list | show <account> — account-centric inventory. Never p
 
 usage() {
   cat <<'EOF'
-ai — AI session router
+ai: AI session router
 
   ai gui     <personal|company> [--browser] [--dry-run]
   ai gui setup [--print]
