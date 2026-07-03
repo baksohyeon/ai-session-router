@@ -91,7 +91,10 @@ Recommended flow: run `ai keychain list`, eyeball the orphans, then `ai keychain
   GUI it also reports the resolved browser per identity, the mechanism (data-dir vs
   profile), and the resolved data-dir / profile with exists/missing status.
 - `ai remote doctor`: hostname, user, Tailscale status/IP, sshd listening check,
-  tmux sessions. **Never configures Tailscale.**
+  tmux sessions, plus read-only control-plane exposure checks (T5): TCP listeners
+  bound off-loopback, agent control planes flagged as WARNINGs, and a HIGH-RISK
+  warning when Tailscale Funnel is active. Prints process name + bind address +
+  port only, never args or secrets. **Never configures Tailscale.**
 - `ai resolve …`: prints exactly what a launch would do (env var, cwd, logs) **without
   launching**. Use this whenever unsure.
 

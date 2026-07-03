@@ -13,6 +13,12 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
   `<name>` gets config roots `${AI_CLAUDE_ROOT_PREFIX}<name>` / `${AI_CODEX_ROOT_PREFIX}<name>`
   and a workspace from `AI_WS_<name>` (fallback `$HOME/dev/<name>`). Fully
   backward-compatible: with `AI_PROFILES` unset, personal/company behave exactly as before.
+- `ai remote doctor` now surfaces exposed local control-plane risk (T5): read-only
+  detection of TCP listeners bound off-loopback (`lsof` on macOS, `ss` on linux),
+  flagging agent-runtime processes (codex/claude/mcp/node) and common control-plane
+  ports as WARNINGs; a HIGH-RISK warning when Tailscale Funnel (public internet) is
+  active; Tailscale Serve reported as informational. Prints process name + bind
+  address + port only, never command-line args or secrets, and changes nothing.
 - `ai gui` now launches the native Claude desktop app isolated per account
   (`--user-data-dir=~/.claude-app-<account>`) on macOS, with browser fallback, plus
   `--browser` and `--dry-run` flags. `ai doctor` reports gui apps and their data dirs.

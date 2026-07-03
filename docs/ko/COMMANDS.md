@@ -88,7 +88,10 @@ macOS의 Claude Code는 각 `CLAUDE_CONFIG_DIR`의 OAuth를 키체인 서비스
   계정별 인증 격리(macOS에서는 키체인 항목 검증), 키체인 스킴 버전 가드, 예시 로그 해석,
   사용 중인 설정 파일. GUI에 대해서는 신원별로 해석된 브라우저, 방식(데이터 디렉터리 vs
   프로필), 해석된 데이터 디렉터리 / 프로필과 존재/없음 상태도 알려준다.
-- `ai remote doctor`: 호스트명, 사용자, Tailscale 상태/IP, sshd 리슨 확인, tmux 세션.
+- `ai remote doctor`: 호스트명, 사용자, Tailscale 상태/IP, sshd 리슨 확인, tmux 세션,
+  그리고 읽기 전용 제어 평면 노출 점검(T5): 루프백이 아닌 주소에 바인딩된 TCP 리스너,
+  에이전트 제어 평면은 WARNING으로 표시, Tailscale Funnel이 활성화되면 HIGH-RISK 경고.
+  프로세스 이름 + 바인딩 주소 + 포트만 출력하며, 인자나 비밀값은 절대 출력하지 않는다.
   **Tailscale을 설정하지는 않는다.**
 - `ai resolve …`: 실행하면 무엇을 할지(환경 변수, cwd, 로그)를 **실행하지 않고** 정확히
   출력한다. 헷갈릴 때마다 쓰면 된다.
