@@ -20,3 +20,15 @@ See [RELEASE.md](RELEASE.md) for how items graduate into a version.
   add `tmux -CC` control-mode support to `ai tmux` (a `--cc` flag) so tmux persistence
   renders as native iTerm2 panes; and document Claude Code `--teammate-mode=iterm2` for
   agent teams.
+- **Shared-store command.** Codify the manual dedup: symlink each account's Claude
+  `skills/` and `plugins/marketplaces` to a single copy under `$AI_SHARED` so a plugin/skill
+  upgrade in one account reaches both, while `installed_plugins.json`, `plugins/cache`, auth,
+  sessions, and projects stay per-account. Verify the source dirs are content-identical
+  before collapsing (path+size manifest; git HEAD for marketplace repos). Optionally extend
+  to Codex `skills/`. Add an `ai doctor` check that the shared symlinks resolve, and back up
+  (move-aside) before swapping. Done by hand on this host 2026-07-03; make it reproducible.
+- **Electron cache prune.** Claude.app per-account user-data dirs (`.claude-app-<account>`)
+  grow large (13G + 7.4G observed 2026-07-03). Add `ai gui prune` to report reclaimable
+  space and, only while the app is quit, clear the safe derived caches (`Cache`, `Code
+  Cache`, `GPUCache`, `Service Worker/CacheStorage`) without touching logins or local
+  storage. Never prune while the app holds the dir open.
