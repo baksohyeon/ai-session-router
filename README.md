@@ -1,5 +1,10 @@
 # ai: AI session router
 
+[![release](https://img.shields.io/github/v/release/baksohyeon/ai-session-router?label=release&sort=semver)](https://github.com/baksohyeon/ai-session-router/releases/latest)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+**Language:** English · [한국어](README.ko.md)  |  **Releases:** [latest](https://github.com/baksohyeon/ai-session-router/releases/latest) · [all](https://github.com/baksohyeon/ai-session-router/releases)
+
 One command to launch **Claude Code** or **Codex** with the right **account**, in the
 right **workspace**, with the right **browser identity**, so your personal and work AI
 usage never bleed into each other.
