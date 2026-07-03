@@ -5,6 +5,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.1.1] - 2026-07-03
+
 ### Added
 - Korean README (`README.ko.md`) with a language toggle in both READMEs, plus release
   and license badges and a releases link on the README.
