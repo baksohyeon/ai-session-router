@@ -6,6 +6,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- Config-driven named profiles via `AI_PROFILES` (space-separated; defaults to
+  `personal company`). Every command now accepts any configured name (e.g.
+  `ai claude client1`, `ai resolve codex client1`), and `ai doctor` / `ai logs` /
+  `ai profiles list` / keychain keep-set enumerate the full set. Each extra profile
+  `<name>` gets config roots `${AI_CLAUDE_ROOT_PREFIX}<name>` / `${AI_CODEX_ROOT_PREFIX}<name>`
+  and a workspace from `AI_WS_<name>` (fallback `$HOME/dev/<name>`). Fully
+  backward-compatible: with `AI_PROFILES` unset, personal/company behave exactly as before.
 - `ai gui` now launches the native Claude desktop app isolated per account
   (`--user-data-dir=~/.claude-app-<account>`) on macOS, with browser fallback, plus
   `--browser` and `--dry-run` flags. `ai doctor` reports gui apps and their data dirs.

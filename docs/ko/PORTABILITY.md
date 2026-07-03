@@ -53,7 +53,15 @@ AI_PERSONAL_WS="$HOME/dev/personal"
 AI_COMPANY_WS="$HOME/work/acme"
 AI_CODEX_ROOT_PREFIX="$HOME/.codex-"
 AI_CHROME_COMPANY_PROFILE="Acme Work"
+AI_PROFILES="personal company client1"   # 임의의 이름 프로필 추가
+AI_WS_client1="$HOME/dev/clients/acme"   # 프로필별 작업공간 (미설정 시 $HOME/dev/client1)
 ```
+
+`AI_PROFILES`는 공백으로 구분하며 기본값은 `personal company`이므로, 설정하지 않으면
+기존 동작이 그대로 유지된다. 추가한 이름 `<name>` 마다 설정 루트
+`${AI_CLAUDE_ROOT_PREFIX}<name>` / `${AI_CODEX_ROOT_PREFIX}<name>` 가 부여되고, 작업공간은
+`AI_WS_<name>` 에서 결정된다(미설정 시 `$HOME/dev/<name>`). 이후 모든 명령이 새 이름을
+받는다. 예: `ai claude client1`, `ai resolve codex client1`.
 
 ## 아직 이식되지 않은 것
 

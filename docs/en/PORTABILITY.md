@@ -53,7 +53,15 @@ AI_PERSONAL_WS="$HOME/dev/personal"
 AI_COMPANY_WS="$HOME/work/acme"
 AI_CODEX_ROOT_PREFIX="$HOME/.codex-"
 AI_CHROME_COMPANY_PROFILE="Acme Work"
+AI_PROFILES="personal company client1"   # add arbitrary named profiles
+AI_WS_client1="$HOME/dev/clients/acme"   # per-profile workspace (fallback $HOME/dev/client1)
 ```
+
+`AI_PROFILES` is space-separated and defaults to `personal company`, so leaving it
+unset keeps the built-in behavior. Each extra name `<name>` gets config roots
+`${AI_CLAUDE_ROOT_PREFIX}<name>` and `${AI_CODEX_ROOT_PREFIX}<name>`, and its workspace
+resolves from `AI_WS_<name>` (fallback `$HOME/dev/<name>`). Every command then accepts
+the new name, e.g. `ai claude client1` or `ai resolve codex client1`.
 
 ## Not yet portable
 

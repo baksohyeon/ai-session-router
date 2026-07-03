@@ -27,6 +27,12 @@ esac
 # Defaults can be overridden via env or ~/.config/ai-session-router/router.env
 : "${AI_PERSONAL_WS:=$HOME/dev/personal}"
 : "${AI_COMPANY_WS:=$HOME/dev/work}"
+# Named profiles the router recognizes (space-separated). Defaults to the built-in
+# personal/company pair so existing configs behave exactly as before. Add more names
+# to route arbitrary identities, e.g. AI_PROFILES="personal company client1". Each
+# extra profile <name> gets config roots ${AI_CLAUDE_ROOT_PREFIX}<name> /
+# ${AI_CODEX_ROOT_PREFIX}<name> and a workspace from AI_WS_<name> (fallback $HOME/dev/<name>).
+: "${AI_PROFILES:=personal company}"
 : "${AI_CLAUDE_ROOT_PREFIX:=$HOME/.claude-}"   # + <account>
 : "${AI_CODEX_ROOT_PREFIX:=$HOME/.codex-}"     # + <account>
 # Generic browser isolation (see docs/superpowers/specs/…-generic-browser-isolation-design.md).
@@ -59,7 +65,12 @@ ws_path() {
   case "$1" in
     personal) print -r -- "$AI_PERSONAL_WS" ;;
     company)  print -r -- "$AI_COMPANY_WS" ;;
-    *) return 1 ;;
+    *)
+      # Generic profile: honor a per-profile AI_WS_<name> override, else $HOME/dev/<name>.
+      valid_ws "$1" || return 1
+      local _wsvar="AI_WS_$1"
+      print -r -- "${(P)_wsvar:-$HOME/dev/$1}"
+      ;;
   esac
 }
 
@@ -346,8 +357,13 @@ _run_with_transcript() {  # <transcript> <cmd> [args...] — preserve TTY via sc
 # ---------- warnings (non-blocking) ----------
 warn() { print -r -- "⚠️  $*" >&2; }
 
-valid_ws()      { [[ "$1" == personal || "$1" == company ]]; }
-valid_account() { [[ "$1" == personal || "$1" == company ]]; }
+# Valid iff the name appears in the configured AI_PROFILES set.
+valid_ws() {
+  local p
+  for p in ${=AI_PROFILES}; do [[ "$1" == "$p" ]] && return 0; done
+  return 1
+}
+valid_account() { valid_ws "$1"; }
 
 check_mismatch() {  # workspace account
   [[ "$1" == personal && "$2" == company ]] && \
@@ -768,8 +784,8 @@ cmd_gui() {  # <personal|company|setup> [--browser] [--dry-run] [--print]
     case "$1" in
       --browser) browser=1; shift ;;
       --dry-run) dry=1; shift ;;
-      personal|company) id="$1"; shift ;;
-      *) print -r -- "usage: ai gui <personal|company> [--browser] [--dry-run]" >&2; return 2 ;;
+      --*) print -r -- "usage: ai gui <personal|company> [--browser] [--dry-run]" >&2; return 2 ;;
+      *) id="$1"; shift ;;
     esac
   done
   valid_ws "$id" || { print -r -- "usage: ai gui <personal|company|setup> [--browser] [--dry-run]" >&2; return 2; }
@@ -843,11 +859,13 @@ cmd_doctor() {
   _has_browser chrome && print -r -- "  Google Chrome: present"  || print -r -- "  Google Chrome: NOT FOUND"
   print -r -- ""
   print -r -- "workspaces:"
-  print -r -- "  personal: $(ws_path personal)"
-  print -r -- "  company:  $(ws_path company)"
+  local ws
+  for ws in ${=AI_PROFILES}; do
+    print -r -- "  $ws: $(ws_path "$ws")"
+  done
   print -r -- "config roots:"
   local a r
-  for a in personal company; do
+  for a in ${=AI_PROFILES}; do
     for t in claude codex; do
       r="$(cfg_root "$t" "$a")"
       [[ -d "$r" ]] && print -r -- "  $t/$a: $r (exists)" || print -r -- "  $t/$a: $r (missing)"
@@ -855,7 +873,7 @@ cmd_doctor() {
   done
   print -r -- "auth isolation:"
   local acct croot khash ksvc
-  for acct in personal company; do
+  for acct in ${=AI_PROFILES}; do
     croot="$(cfg_root claude "$acct")"
     if [[ -f "$croot/.credentials.json" ]]; then
       # Linux/Windows (or a macOS build that ever writes a file) — creds live in-dir.
@@ -886,7 +904,7 @@ cmd_doctor() {
   fi
   # Codex auth mode per account — presence + declared store, never token contents.
   local ca cxroot store authf mode
-  for ca in personal company; do
+  for ca in ${=AI_PROFILES}; do
     cxroot="$(cfg_root codex "$ca")"; authf="$cxroot/auth.json"; store="$(codex_store_pref "$cxroot")"
     if [[ -f "$authf" ]]; then
       print -r -- "  codex/$ca: file-backed creds present (auth.json) — isolated by CODEX_HOME ✓"
@@ -924,7 +942,7 @@ cmd_doctor() {
     gbundle="$(gui_app_bundle "$gapp")"
     [[ -d "$gbundle" ]] && print -r -- "  $gapp app: $gbundle (present)" \
                         || print -r -- "  $gapp app: $gbundle (NOT FOUND)"
-    for a in personal company; do
+    for a in ${=AI_PROFILES}; do
       gd="$(gui_app_dataprefix "$gapp")$a"
       [[ -d "$gd" ]] && print -r -- "    data/$a: $gd (exists)" \
                      || print -r -- "    data/$a: $gd (missing)"
@@ -933,7 +951,7 @@ cmd_doctor() {
   print -r -- "gui browser identities:"
   print -r -- "  AI_BROWSER: ${AI_BROWSER:-(unset -> auto-detect)}"
   local bid bpref btarget bprofile bdatadir
-  for bid in personal company; do
+  for bid in ${=AI_PROFILES}; do
     bpref="$(_gui_resolve_browser_pref "$bid")"
     if [[ -n "$bpref" ]] && btarget="$(_browser_launch_target "$bpref")"; then :
     elif btarget="$(_browser_first_detected)"; then :
@@ -976,7 +994,7 @@ cmd_remote_doctor() {
 cmd_logs() {
   print -r -- "== ai logs =="
   local ws base files
-  for ws in personal company; do
+  for ws in ${=AI_PROFILES}; do
     base="$(ws_path "$ws")/.ai-logs"
     print -r -- "[$ws] $base"
     if [[ -d "$base" ]]; then
@@ -992,8 +1010,9 @@ cmd_logs() {
 # $@ = extra --keep dirs to whitelist. Populates the assoc array named _keep_map.
 _keychain_build_keep() {  # $@ extra keep dirs -> fills the caller-scoped _keep_map assoc array
   setopt local_options null_glob
-  local -a candidates=("$HOME/.claude" "${AI_CLAUDE_ROOT_PREFIX}"*(N) \
-                       "$(cfg_root claude personal)" "$(cfg_root claude company)" "$@")
+  local -a candidates=("$HOME/.claude" "${AI_CLAUDE_ROOT_PREFIX}"*(N) "$@")
+  local _p
+  for _p in ${=AI_PROFILES}; do candidates+=("$(cfg_root claude "$_p")"); done
   local dir h
   for dir in "${candidates[@]}"; do
     [[ -n "$dir" && -d "$dir" ]] || continue           # only dirs that actually exist
@@ -1137,7 +1156,7 @@ cmd_profiles() {  # list | show <account> — account-centric inventory. Never p
     list)
       print -r -- "== ai profiles =="
       local a wp
-      for a in personal company; do
+      for a in ${=AI_PROFILES}; do
         wp="$(ws_path "$a")"
         print -r -- "[$a]  workspace: $wp $(_dirmark "$wp")"
         print -r -- "  claude  $(cfg_root claude "$a")   auth: $(_profile_claude_auth "$(cfg_root claude "$a")")"
