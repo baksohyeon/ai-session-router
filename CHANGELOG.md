@@ -19,6 +19,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
   ports as WARNINGs; a HIGH-RISK warning when Tailscale Funnel (public internet) is
   active; Tailscale Serve reported as informational. Prints process name + bind
   address + port only, never command-line args or secrets, and changes nothing.
+- `scripts/smoke.sh`: a safe, read-only/dry-run smoke battery (runs under zsh or bash)
+  covering `ai resolve`, `profiles`, `doctor`/`remote doctor`/`logs`, `gui --dry-run`,
+  `gui setup --print`, and `keychain list`, plus a secret-leak scan. It never launches an
+  interactive session, opens a browser/app, or prunes; exits non-zero on any failure.
+- Docs: `WSL-LINUX.md` (EN + KO): exact WSL and Linux setup, how to run the smoke
+  battery, and an explicit verified-vs-not table (macOS verified; Linux static-audited
+  with script; Windows/WSL static + script, not live-tested here). Linked from SUPPORT.md.
 - `ai gui` now launches the native Claude desktop app isolated per account
   (`--user-data-dir=~/.claude-app-<account>`) on macOS, with browser fallback, plus
   `--browser` and `--dry-run` flags. `ai doctor` reports gui apps and their data dirs.

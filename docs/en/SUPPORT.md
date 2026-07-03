@@ -112,4 +112,5 @@ version you run.)
   workspace do they move you to its root (with a warning). `ai gui` ignores your location.
 
 See also [ARCHITECTURE.md](ARCHITECTURE.md), [PORTABILITY.md](PORTABILITY.md),
-[CODEX-AUTH.md](CODEX-AUTH.md), [SURFACES.md](SURFACES.md), and [THREAT-MODEL.md](THREAT-MODEL.md).
+[WSL-LINUX.md](WSL-LINUX.md), [CODEX-AUTH.md](CODEX-AUTH.md), [SURFACES.md](SURFACES.md),
+and [THREAT-MODEL.md](THREAT-MODEL.md).
