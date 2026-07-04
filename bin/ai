@@ -37,9 +37,10 @@ esac
 : "${AI_CODEX_ROOT_PREFIX:=$HOME/.codex-}"     # + <account>
 # Generic browser isolation (see docs/superpowers/specs/…-generic-browser-isolation-design.md).
 # AI_BROWSER: default browser for isolated GUI launches (macOS app name / linux binary).
-#   Empty → auto-detect first available Chromium browser; else OS default browser.
+#   Empty (the default) → auto-detect first available Chromium browser; else OS default
+#   browser. Set it only to pin a specific browser; a fresh machine needs no config.
 # AI_BROWSER_DATA_PREFIX: prefix for per-identity isolated user-data dirs; router appends <id>.
-: "${AI_BROWSER:=Microsoft Edge}"
+: "${AI_BROWSER:=}"
 : "${AI_BROWSER_DATA_PREFIX:=$HOME/.ai-browser-}"
 # Legacy vars, honored as fallbacks for pre-generic configs. AI_CHROME_COMPANY_PROFILE
 # defaults EMPTY: a fresh install (no legacy var) uses the isolated-data-dir default,
@@ -585,6 +586,15 @@ _gui_browser() {  # <id> [--dry-run]
   return 0
 }
 
+# A stock macOS without the Command Line Tools ships /usr/bin/python3 as a stub
+# that pops a GUI "install developer tools?" dialog when executed. Treat that
+# stub as unusable so callers degrade silently instead of surprising the user.
+_python3_usable() {
+  [[ "$AI_OS" == macos ]] || return 0
+  [[ "$(command -v python3)" != /usr/bin/python3 ]] && return 0  # brew/pyenv/etc.
+  xcode-select -p >/dev/null 2>&1                                # CLT present → real python3
+}
+
 # ---------- ai gui setup helpers ----------
 # List existing profile display names from a browser's "Local State" JSON.
 # Output: one line per profile, "<dir>\t<display name>". Degrades to nothing if the
@@ -594,7 +604,7 @@ _setup_profiles_for() {  # $1 = browser key
   dir="$(_browser_localstate_dir "$1")" || return 1
   ls="$dir/Local State"
   [[ -r "$ls" ]] || return 1
-  if command -v python3 >/dev/null 2>&1; then
+  if command -v python3 >/dev/null 2>&1 && _python3_usable; then
     python3 - "$ls" <<'PY' 2>/dev/null || return 1
 import json, sys
 try:

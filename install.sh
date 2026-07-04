@@ -17,6 +17,12 @@ COMPANY_WS="${AI_COMPANY_WS:-$HOME/dev/work}"
 echo "== ai session router install =="
 echo "repo: $REPO_DIR"
 
+# 0. runtime dependency check (install proceeds either way) ------------------
+if ! command -v zsh >/dev/null 2>&1; then
+  echo "  WARNING: zsh not found. 'ai' needs zsh at runtime (macOS ships it;"
+  echo "           Linux: apt/dnf/pacman install zsh). Installing anyway."
+fi
+
 # 1. directories ------------------------------------------------------------
 mkdir -p \
   "$PERSONAL_WS/.ai-logs" \
@@ -41,7 +47,7 @@ AI_CODEX_ROOT_PREFIX="\$HOME/.codex-"
 # Browser isolation (generic \`ai gui\` browser path).
 # DEFAULT mechanism: launch browser with --user-data-dir=<prefix><id>, which auto-creates
 # an isolated instance (no pre-existing profile required) — mirrors the desktop-app path.
-AI_BROWSER="Microsoft Edge"                 # default browser; empty → auto-detect Chromium, else OS default
+AI_BROWSER=""                               # empty → auto-detect Chromium (edge→chrome→brave→arc→chromium), else OS default; set to pin one
 AI_BROWSER_DATA_PREFIX="\$HOME/.ai-browser-" # router appends <id>, e.g. ~/.ai-browser-company
 AI_GUI_BROWSER_personal=""                  # optional: override AI_BROWSER for this identity
 AI_GUI_BROWSER_company=""
@@ -77,8 +83,10 @@ chmod +x "$BIN_SRC" 2>/dev/null || true
 # 5. PATH hint --------------------------------------------------------------
 case ":$PATH:" in
   *":$HOME/.local/bin:"*) : ;;
-  *) echo "  NOTE: add ~/.local/bin to PATH, e.g.:"
-     echo '        echo '\''export PATH="$HOME/.local/bin:$PATH"'\'' >> ~/.zshrc' ;;
+  *) rc="$HOME/.zshrc"
+     case "${SHELL:-}" in */bash) rc="$HOME/.bashrc" ;; esac
+     echo "  NOTE: add ~/.local/bin to PATH, e.g.:"
+     echo "        echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> $rc" ;;
 esac
 
 echo "done. run: ai doctor"
