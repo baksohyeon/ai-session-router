@@ -1449,6 +1449,61 @@ cmd_profiles() {  # list | show <account> (account-centric inventory). Never pri
   esac
 }
 
+# ---------- interactive picker ----------
+# Bare `ai` on a TTY walks tool → identity → account with numbered prompts and
+# defaults (enter accepts), then dispatches to the exact same code paths as the
+# explicit commands. Non-TTY (scripts, pipes, CI) still prints usage. Pure zsh,
+# no dependencies.
+_pick_from() {  # $1 prompt, $2 default index, $3.. options -> echoes the choice
+  local prompt="$1" def="$2"; shift 2
+  local -a opts=("$@")
+  local i reply o
+  print -r -- "$prompt" >&2
+  for (( i = 1; i <= ${#opts}; i++ )); do
+    if (( i == def )); then print -r -- "  $i) ${opts[i]}   ← enter" >&2
+    else print -r -- "  $i) ${opts[i]}" >&2; fi
+  done
+  while true; do
+    printf "> " >&2
+    read -r reply || return 1                        # EOF / ctrl-d → abort
+    [[ -z "$reply" ]] && { print -r -- "${opts[def]}"; return 0; }
+    if [[ "$reply" == <-> ]] && (( reply >= 1 && reply <= ${#opts} )); then
+      print -r -- "${opts[reply]}"; return 0
+    fi
+    for o in "${opts[@]}"; do                        # typing the name also works
+      [[ "$reply" == "$o" ]] && { print -r -- "$o"; return 0; }
+    done
+    print -r -- "  pick 1-${#opts}, type a name, or enter for the default" >&2
+  done
+}
+
+cmd_pick() {
+  local -a profiles=(${=AI_PROFILES})
+  local tool ws ans
+  print -r -- "ai — interactive (enter accepts the default; ctrl-c aborts)" >&2
+  tool="$(_pick_from "run what?" 1 claude codex shell tmux gui doctor)" || return 130
+  case "$tool" in
+    doctor) cmd_doctor; return $? ;;
+  esac
+  ws="$(_pick_from "which identity?" 1 "${profiles[@]}")" || return 130
+  case "$tool" in
+    claude|codex)
+      printf "account = %s (follows workspace). type another name to override, enter to keep: " "$ws" >&2
+      read -r ans || return 130
+      if [[ -n "$ans" ]]; then
+        valid_account "$ans" || { print -r -- "invalid account: $ans (known: $AI_PROFILES)" >&2; return 2; }
+        print -r -- "→ ai $tool $ws --account $ans" >&2
+        run_tool "$tool" "$ws" --account "$ans"
+      else
+        print -r -- "→ ai $tool $ws" >&2
+        run_tool "$tool" "$ws"
+      fi ;;
+    shell) print -r -- "→ ai shell $ws" >&2; cmd_shell "$ws" ;;
+    tmux)  print -r -- "→ ai tmux $ws"  >&2; cmd_tmux "$ws" ;;
+    gui)   print -r -- "→ ai gui $ws"   >&2; cmd_gui "$ws" ;;
+  esac
+}
+
 usage() {
   cat <<'EOF'
 ai: AI session router
@@ -1466,6 +1521,7 @@ ai: AI session router
   ai logs
   ai profiles [list | show <personal|company>]
   ai resolve <claude|codex> <personal|company> [--account personal|company]
+  ai pick                                                       (interactive; bare `ai` on a TTY does this too)
 
 Defaults: account follows workspace. Override with --account.
 Config: ${XDG_CONFIG_HOME:-~/.config}/ai-session-router/router.env
@@ -1487,7 +1543,9 @@ main() {
     logs)    cmd_logs ;;
     profiles) cmd_profiles "$@" ;;
     resolve) cmd_resolve "$@" ;;
-    ""|help|-h|--help) usage ;;
+    pick)    cmd_pick ;;
+    "")      if [[ -t 0 && -t 1 ]]; then cmd_pick; else usage; fi ;;
+    help|-h|--help) usage ;;
     *) print -r -- "unknown command: $cmd" >&2; usage; return 1 ;;
   esac
 }

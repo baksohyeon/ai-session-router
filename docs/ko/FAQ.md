@@ -7,6 +7,12 @@
 [ARCHITECTURE.md](./ARCHITECTURE.md)(신원 라우팅이 어떻게 작동하는가)의
 자매 문서입니다.
 
+그 무엇보다 앞서는 표준 권장 사항 하나: **CLI에서 사세요.** 터미널 경로(`ai
+claude <ws>`, tmux, SSH)가 단순하고 스크립트 가능하며 원격에서도 통하는
+길입니다. GUI/브라우저 축은 채팅 표면 때문에 존재하고, 금세 복잡해집니다.
+아래 다이어그램들이 일부러 평범한 ASCII인 것도 같은 맥락입니다 —
+GitHub에서도, 터미널에서도, `cat`으로도 똑같이 읽힙니다.
+
 ---
 
 ## 목차
@@ -179,16 +185,33 @@ Machine (예: M3 Max)       ← tmux 세션, 실행 중인 에이전트, Tailsca
 
 `ai claude company`에서 실제로 벌어지는 일:
 
-```mermaid
-flowchart LR
-    CMD(["ai claude company"]) --> ACC["계정 축<br/>CLAUDE_CONFIG_DIR=~/.claude-company"]
-    CMD --> WS["워크스페이스 축<br/>cd ~/dev/work"]
-    ACC --> TOOL(["claude 프로세스 시작"])
-    WS --> TOOL
-    TOOL --> G["계정 루트에서 GLOBAL 상태를 읽음:<br/>인증 · 설정 · 스킬 · 플러그인 · MCP 등록"]
-    TOOL --> P["cwd에서 위로 올라가며 PROJECT 상태를 발견:<br/>CLAUDE.md · .claude/ · .mcp.json"]
-    TOOL --> L["워크스페이스에 트랜스크립트를 기록:<br/>~/dev/work/.ai-logs/claude/company-account/…"]
 ```
+                      ai claude company
+                             │
+             ┌───────────────┴───────────────┐
+             ▼                               ▼
+     ACCOUNT axis                     WORKSPACE axis
+     CLAUDE_CONFIG_DIR=               cd ~/dev/work
+     ~/.claude-company                       │
+             └───────────────┬───────────────┘
+                             ▼
+                   claude process starts
+                             │
+       ┌─────────────────────┼─────────────────────┐
+       ▼                     ▼                     ▼
+ GLOBAL state          PROJECT state          transcript goes
+ from the account      discovered walking     into the workspace:
+ root: auth·settings   up from cwd:           ~/dev/work/.ai-logs/
+ skills·plugins·MCP    CLAUDE.md · .claude/   claude/company-account/…
+ registrations         .mcp.json
+```
+
+*(한글은 터미널에서 두 칸 폭이라 정렬이 깨지므로 레이블은 영어로 둡니다.
+ACCOUNT axis = 계정 축 · WORKSPACE axis = 워크스페이스 축 · "claude process
+starts" = claude 프로세스 시작 · GLOBAL state… = 계정 루트에서 읽는 전역
+상태(인증·설정·스킬·플러그인·MCP 등록) · PROJECT state… = cwd에서 위로
+올라가며 발견하는 프로젝트 상태 · transcript… = 트랜스크립트는
+워크스페이스의 `~/dev/work/.ai-logs/claude/company-account/…`에 기록.)*
 
 "인식은 대체 어디서 시작되나?"의 답이 저 세 번째 화살표 쌍입니다: **전역
 상태는 환경 변수를 따라가고, 프로젝트 상태는 지금 서 있는 디렉터리를
@@ -206,9 +229,9 @@ flowchart LR
 | 상태 | 위치 | 계정 간 공유? | 머신 간 이동? |
 |------|------|---------------|---------------|
 | Claude CLI 인증 | macOS 키체인 (설정 디렉터리별 키) | ✗ | ✗ 키체인은 머신 종속 |
-| Codex CLI 인증 | `$CODEX_HOME/auth.json` | ✗ | ✗ (파일이긴 하나 자격 증명 복사는 금물) |
+| Codex CLI 인증 | `$CODEX_HOME/auth.json` (기본은 파일 모드; 키링은 선택) | ✗ | ✗ (파일이긴 하나 자격 증명 복사는 금물) |
 | CLI 채팅 기록 / 세션 | 계정 루트 | ✗ | ✗ |
-| 스킬, 플러그인 | 계정 루트 — 또는 `~/.ai-shared` (opt-in 공유 저장소) | opt-in ✓ | ✗ (하지만 git 관리 가능) |
+| 스킬, 플러그인 | 계정 루트 — 또는 `~/.ai-shared` (opt-in 공유 저장소) ⁽¹⁾ | opt-in ✓ | ✗ (하지만 git 관리 가능) |
 | MCP 서버, 전역 | 계정 루트 설정 (계정별 토큰) | ✗ | ✗ |
 | MCP 서버, 프로젝트 | 워크스페이스의 `.mcp.json` | 계정이 아니라 *워크스페이스*를 따라감 | ✓ 저장소가 동기화되면 |
 | 프로젝트 메모리 (`CLAUDE.md`, `.claude/`) | 워크스페이스 | 워크스페이스를 따라감 | ✓ git으로 |
@@ -239,32 +262,51 @@ flowchart LR
 
 같은 매트릭스를 그림으로 보면:
 
-```mermaid
-flowchart TD
-    subgraph MACHINE["이 머신"]
-        subgraph PA["personal"]
-            PC["~/.claude-personal<br/>~/.codex-personal<br/>인증 · 기록 · 플러그인"]
-            PB["~/.ai-browser-personal<br/>웹 쿠키"]
-        end
-        subgraph CO["company"]
-            CC["~/.claude-company<br/>~/.codex-company<br/>인증 · 기록 · 플러그인"]
-            CB["~/.ai-browser-company<br/>웹 쿠키"]
-        end
-        SH["~/.ai-shared<br/>스킬 · 마켓플레이스<br/>(opt-in, 계정 중립)"]
-        WS1["~/dev/personal<br/>코드 · CLAUDE.md · .mcp.json · .ai-logs"]
-        WS2["~/dev/work<br/>코드 · CLAUDE.md · .mcp.json · .ai-logs"]
-        PC -.opt-in.- SH
-        CC -.opt-in.- SH
-    end
-    CLOUD1["claude.ai personal<br/>(서버 측 기록)"]
-    CLOUD2["claude.ai / chatgpt company<br/>(서버 측 기록)"]
-    PB --- CLOUD1
-    CB --- CLOUD2
-    GIT["git remote<br/>(워크스페이스 상태는 여기로 이동)"]
-    WS1 --- GIT
-    WS2 --- GIT
 ```
+┌─ this machine ────────────────────────────────────────────────────┐
+│                                                                   │
+│   personal                             company                    │
+│   ~/.claude-personal                   ~/.claude-company          │
+│   ~/.codex-personal                    ~/.codex-company           │
+│   (auth · history · plugins)           (auth · history · plugins) │
+│         │                                     │                   │
+│         │ opt-in                       opt-in │                   │
+│         └────────►  ~/.ai-shared  ◄───────────┘                   │
+│                     skills · marketplaces                         │
+│                     (account-neutral)                             │
+│                                                                   │
+│   ~/.ai-browser-personal               ~/.ai-browser-company      │
+│   (web cookies) ····································┐             │
+│         :                                     :     :             │
+│   ~/dev/personal                       ~/dev/work   :             │
+│   code · CLAUDE.md ·                   code · CLAUDE.md ·         │
+│   .mcp.json · .ai-logs                 .mcp.json · .ai-logs       │
+│         │                                     │     :             │
+└─────────┼─────────────────────────────────────┼─────┼─────────────┘
+          ▼                                     ▼     ▼
+     git remote                            git remote  claude.ai / chatgpt
+     (workspace state                                  (server-side history,
+      travels here)                                     follows the web login)
+```
+
+*(레이블은 정렬 보존을 위해 영어로 둡니다. this machine = 이 머신 · auth ·
+history · plugins = 인증·기록·플러그인 · skills · marketplaces
+(account-neutral) = 스킬·마켓플레이스(opt-in, 계정 중립) · web cookies = 웹
+쿠키 · "workspace state travels here" = 워크스페이스 상태는 여기로 이동 ·
+"server-side history, follows the web login" = 서버 측 기록, 웹 로그인을
+따라감.)*
 
 머신 박스 안의 모든 것은, 선이 박스 밖으로 나가지 않는 한 머신에
 남습니다: 워크스페이스는 git으로 이동하고, 웹 기록은 프로바이더 곁에
 살고, 공유 저장소는 계정 사이에 놓인 유일한 의도적 다리입니다.
+
+---
+
+⁽¹⁾ 설정 디렉터리 아래의 `skills/` · `plugins/` 배치는 공식 문서화된 것이
+아니라 관찰된 동작입니다 — 업그레이드 후 다시 확인해야 하는 대상으로
+취급하세요. [ARCHITECTURE.md §5](./ARCHITECTURE.md#5-알려진-한계)가 키체인
+이름 규칙에 붙이는 것과 같은 단서입니다.
+
+*위 내용은 공식 문서(Claude Code의 settings / mcp / memory / authentication
+페이지, Codex 인증 레퍼런스, Chromium의 user-data-dir 문서)와 대조해
+확인했습니다, 2026-07.*

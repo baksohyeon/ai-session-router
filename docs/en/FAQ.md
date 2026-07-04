@@ -6,6 +6,12 @@ Honest answers, including the uncomfortable ones. Companion to
 [REMOTE-ACCESS.md](./REMOTE-ACCESS.md) (how to connect) and
 [ARCHITECTURE.md](./ARCHITECTURE.md) (how identity routing works).
 
+A standing recommendation before any of it: **live in the CLI.** The terminal
+path (`ai claude <ws>`, tmux, SSH) is the simple, scriptable, remotable one;
+the GUI/browser axis exists for the chat surfaces and gets complicated fast.
+Diagrams below are plain ASCII on purpose — they read the same on GitHub, in a
+terminal, and in `cat`.
+
 ---
 
 ## Table of contents
@@ -176,15 +182,25 @@ Machine (e.g. M3 Max)      ← tmux sessions, running agents, Tailscale node
 
 What actually happens on `ai claude company`:
 
-```mermaid
-flowchart LR
-    CMD(["ai claude company"]) --> ACC["account axis<br/>CLAUDE_CONFIG_DIR=~/.claude-company"]
-    CMD --> WS["workspace axis<br/>cd ~/dev/work"]
-    ACC --> TOOL(["claude process starts"])
-    WS --> TOOL
-    TOOL --> G["reads GLOBAL state from the account root:<br/>auth · settings · skills · plugins · MCP registrations"]
-    TOOL --> P["discovers PROJECT state walking up from cwd:<br/>CLAUDE.md · .claude/ · .mcp.json"]
-    TOOL --> L["writes transcript into the workspace:<br/>~/dev/work/.ai-logs/claude/company-account/…"]
+```
+                      ai claude company
+                             │
+             ┌───────────────┴───────────────┐
+             ▼                               ▼
+     ACCOUNT axis                     WORKSPACE axis
+     CLAUDE_CONFIG_DIR=               cd ~/dev/work
+     ~/.claude-company                       │
+             └───────────────┬───────────────┘
+                             ▼
+                   claude process starts
+                             │
+       ┌─────────────────────┼─────────────────────┐
+       ▼                     ▼                     ▼
+ GLOBAL state          PROJECT state          transcript goes
+ from the account      discovered walking     into the workspace:
+ root: auth·settings   up from cwd:           ~/dev/work/.ai-logs/
+ skills·plugins·MCP    CLAUDE.md · .claude/   claude/company-account/…
+ registrations         .mcp.json
 ```
 
 The answer to "where does recognition even start?" is that third arrow pair:
@@ -203,9 +219,9 @@ column asks whether the thing follows you to another machine:
 | State | Lives at | Shared across accounts? | Follows you across machines? |
 |-------|----------|-------------------------|------------------------------|
 | Claude CLI auth | macOS Keychain (keyed per config dir) | ✗ | ✗ Keychain is machine-bound |
-| Codex CLI auth | `$CODEX_HOME/auth.json` | ✗ | ✗ (a file, but don't copy creds) |
+| Codex CLI auth | `$CODEX_HOME/auth.json` (default file mode; keyring optional) | ✗ | ✗ (a file, but don't copy creds) |
 | CLI chat history / sessions | account root | ✗ | ✗ |
-| Skills, plugins | account root — or `~/.ai-shared` (opt-in shared store) | opt-in ✓ | ✗ (but git-able) |
+| Skills, plugins | account root — or `~/.ai-shared` (opt-in shared store) ⁽¹⁾ | opt-in ✓ | ✗ (but git-able) |
 | MCP servers, global | account root config (per-account tokens) | ✗ | ✗ |
 | MCP servers, project | `.mcp.json` in the workspace | follows the *workspace*, not the account | ✓ if the repo syncs |
 | Project memory (`CLAUDE.md`, `.claude/`) | workspace | follows the workspace | ✓ via git |
@@ -235,32 +251,44 @@ Three rows deserve emphasis:
 
 And the same matrix as a picture:
 
-```mermaid
-flowchart TD
-    subgraph MACHINE["This machine"]
-        subgraph PA["personal"]
-            PC["~/.claude-personal<br/>~/.codex-personal<br/>auth · history · plugins"]
-            PB["~/.ai-browser-personal<br/>web cookies"]
-        end
-        subgraph CO["company"]
-            CC["~/.claude-company<br/>~/.codex-company<br/>auth · history · plugins"]
-            CB["~/.ai-browser-company<br/>web cookies"]
-        end
-        SH["~/.ai-shared<br/>skills · marketplaces<br/>(opt-in, account-neutral)"]
-        WS1["~/dev/personal<br/>code · CLAUDE.md · .mcp.json · .ai-logs"]
-        WS2["~/dev/work<br/>code · CLAUDE.md · .mcp.json · .ai-logs"]
-        PC -.opt-in.- SH
-        CC -.opt-in.- SH
-    end
-    CLOUD1["claude.ai personal<br/>(server-side history)"]
-    CLOUD2["claude.ai / chatgpt company<br/>(server-side history)"]
-    PB --- CLOUD1
-    CB --- CLOUD2
-    GIT["git remote<br/>(workspace state travels here)"]
-    WS1 --- GIT
-    WS2 --- GIT
+```
+┌─ this machine ────────────────────────────────────────────────────┐
+│                                                                   │
+│   personal                             company                    │
+│   ~/.claude-personal                   ~/.claude-company          │
+│   ~/.codex-personal                    ~/.codex-company           │
+│   (auth · history · plugins)           (auth · history · plugins) │
+│         │                                     │                   │
+│         │ opt-in                       opt-in │                   │
+│         └────────►  ~/.ai-shared  ◄───────────┘                   │
+│                     skills · marketplaces                         │
+│                     (account-neutral)                             │
+│                                                                   │
+│   ~/.ai-browser-personal               ~/.ai-browser-company      │
+│   (web cookies) ····································┐             │
+│         :                                     :     :             │
+│   ~/dev/personal                       ~/dev/work   :             │
+│   code · CLAUDE.md ·                   code · CLAUDE.md ·         │
+│   .mcp.json · .ai-logs                 .mcp.json · .ai-logs       │
+│         │                                     │     :             │
+└─────────┼─────────────────────────────────────┼─────┼─────────────┘
+          ▼                                     ▼     ▼
+     git remote                            git remote  claude.ai / chatgpt
+     (workspace state                                  (server-side history,
+      travels here)                                     follows the web login)
 ```
 
 Everything inside the machine box stays on the machine unless a line leaves the
 box: workspaces travel via git, web history lives with the provider, and the
 shared store is the one deliberate bridge between accounts.
+
+---
+
+⁽¹⁾ The `skills/` and `plugins/` layout under the config dir is observed
+behavior, not formally documented — treat it as re-verify-after-upgrade, the
+same caveat [ARCHITECTURE.md §5](./ARCHITECTURE.md#5-known-limitations) applies
+to the Keychain naming.
+
+*Claims above were checked against the official docs (Claude Code
+settings / mcp / memory / authentication pages, the Codex auth reference, and
+Chromium's user-data-dir documentation), 2026-07.*
