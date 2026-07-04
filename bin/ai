@@ -340,6 +340,10 @@ _sshd_listening() {  # echoes a human string
     print -r -- "yes (listener detected on tcp/22)"
   elif command -v ss >/dev/null 2>&1 && ss -ltn 2>/dev/null | grep -qE '[:.]22 '; then
     print -r -- "yes (ss: listener on tcp/22)"
+  elif command -v nc >/dev/null 2>&1 && nc -z -w 2 127.0.0.1 22 >/dev/null 2>&1; then
+    # Unprivileged lsof can't see root-owned listeners (macOS sshd); a plain
+    # TCP connect probe still proves something is answering on :22.
+    print -r -- "yes (tcp connect to 127.0.0.1:22 succeeded)"
   else
     print -r -- "not detected (may require privileges / remote login off)"
   fi
@@ -1149,7 +1153,7 @@ _report_tailscale_exposure() {  # $1 = tailscale path (may be empty)
   if [[ -z "$tp" ]]; then
     print -r -- "  (tailscale not installed; cannot check Funnel)"
   else
-    local funnel; funnel="$(tailscale funnel status 2>/dev/null)"
+    local funnel; funnel="$("$tp" funnel status 2>/dev/null)"
     if [[ -z "$funnel" || "$funnel" == *"No serve config"* || "$funnel" == *"Funnel is not"* ]]; then
       print -r -- "  Funnel not active ✓"
     else
@@ -1163,7 +1167,7 @@ _report_tailscale_exposure() {  # $1 = tailscale path (may be empty)
   if [[ -z "$tp" ]]; then
     print -r -- "  (tailscale not installed; cannot check Serve)"
   else
-    local serve; serve="$(tailscale serve status 2>/dev/null)"
+    local serve; serve="$("$tp" serve status 2>/dev/null)"
     if [[ -z "$serve" || "$serve" == *"No serve config"* ]]; then
       print -r -- "  Serve not active."
     else
@@ -1179,15 +1183,21 @@ cmd_remote_doctor() {
   print -r -- "hostname: $(hostname)"
   print -r -- "whoami:   $(whoami)"
   local tp; tp="$(command -v tailscale 2>/dev/null)"
+  # The macOS GUI app ships no CLI on PATH; its bundled binary works, but only
+  # at its real path (it aborts when invoked through a symlink).
+  [[ -z "$tp" && -x "/Applications/Tailscale.app/Contents/MacOS/Tailscale" ]] && \
+    tp="/Applications/Tailscale.app/Contents/MacOS/Tailscale"
   print -r -- "tailscale: ${tp:-NOT FOUND}"
   if [[ -n "$tp" ]]; then
-    print -r -- "-- tailscale status (summary) --"; tailscale status 2>/dev/null | head -n 10 || print -r -- "  (status unavailable)"
-    print -r -- "-- tailscale ip --"; tailscale ip 2>/dev/null || print -r -- "  (ip unavailable)"
+    print -r -- "-- tailscale status (summary) --"; "$tp" status 2>/dev/null | head -n 10 || print -r -- "  (status unavailable)"
+    print -r -- "-- tailscale ip --"; "$tp" ip 2>/dev/null || print -r -- "  (ip unavailable)"
   fi
   print -r -- "-- sshd listening on :22? --"; print -r -- "  $(_sshd_listening)"
   print -r -- "-- tmux sessions --"; tmux ls 2>/dev/null || print -r -- "  (none)"
   print -r -- "-- zellij sessions --"
   if command -v zellij >/dev/null 2>&1; then zellij list-sessions 2>/dev/null || print -r -- "  (none)"; else print -r -- "  (zellij not installed)"; fi
+  print -r -- "-- herdr sessions --"
+  if command -v herdr >/dev/null 2>&1; then herdr session list 2>/dev/null || print -r -- "  (none)"; else print -r -- "  (herdr not installed)"; fi
   _report_exposed_listeners
   _report_tailscale_exposure "$tp"
   print -r -- "-- control-plane exposure notes --"
