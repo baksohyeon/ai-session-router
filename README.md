@@ -100,6 +100,11 @@ covered in [docs/en/REMOTE-ACCESS.md](docs/en/REMOTE-ACCESS.md)
 ([한국어](docs/ko/REMOTE-ACCESS.md)). Network fundamentals through Tailscale, SSH,
 tmux, sleep control, mobile clients, and end-to-end workflows.
 
+The honest Q&A — how far a Raspberry Pi goes, what syncs between machines and what
+can't, why you don't tunnel around the company network, and which layer (machine /
+account / workspace / browser) owns which state, with diagrams — is in
+[docs/en/FAQ.md](docs/en/FAQ.md) ([한국어](docs/ko/FAQ.md)).
+
 ## Security
 
 This repo ships **no secrets**. Account config roots (`~/.claude-*`, `~/.codex-*`) and
