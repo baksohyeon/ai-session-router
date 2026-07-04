@@ -5,8 +5,23 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-04
+
 ### Added
 
+- `ai pick`: an interactive picker (bare `ai` on a TTY does the same) that walks
+  tool → identity → account with numbered prompts and enter-for-default, then
+  dispatches to the exact same code paths as the explicit commands. Pure zsh, no
+  dependencies; bare `ai` in scripts/CI (non-TTY) still prints usage.
+- `ai remote doctor` upgrades: detects the macOS GUI-app Tailscale (whose CLI
+  hides inside the app bundle and refuses symlinks), falls back to a plain TCP
+  probe for the sshd check (unprivileged `lsof` can't see root's listener), and
+  lists herdr sessions alongside tmux/zellij.
+- `docs/en/FAQ.md` + `docs/ko/FAQ.md`: Raspberry Pi limits, what syncs between
+  machines and what can't, the honest three-case answer on working around a
+  corporate network, and the identity-layer map (machine/account/workspace/
+  browser) with ASCII diagrams. Claims verified against the official Claude
+  Code / Codex / Chromium docs; linked from both READMEs.
 - `ai doctor` and `ai profiles` now report per-account content (skills count,
   plugin marketplaces, config presence, never secrets) and `ai doctor` warns when
   an account is logged in but unpopulated (0 skills). This surfaces the hollow-shell
@@ -15,11 +30,32 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ### Changed
 
+- `docs/*/REMOTE-ACCESS.md` restructured Tailscale-first (EN+KO): the mesh-VPN
+  path is now §1, networking theory and the pre-Tailscale toolbox moved to an
+  appendix TL;DR, a tmux/zellij/Herdr/mosh trade-off table was added, and the
+  field-tested gotchas (node key expiry, GUI-app CLI alias, Remote Login on the
+  wrong Mac, stale auth URLs, Pi power-supply reboot loops) are folded in. The
+  Korea-specific appendix is now present in both languages.
+- `AI_BROWSER` defaults to empty (auto-detect: edge → chrome → brave → arc →
+  chromium, else the OS default browser) instead of hardcoding Microsoft Edge;
+  `install.sh` no longer seeds Edge into fresh configs. Explicit configs keep
+  working; machines with Edge resolve to Edge via auto-detect as before.
+- `install.sh` warns when zsh is missing and targets `~/.bashrc` in the PATH
+  hint for bash users.
 - `ai gui` no longer launches the Codex desktop app. Codex resolves its account,
   config, plugins, and skills from `CODEX_HOME`, not from an Electron
   `--user-data-dir`, so isolating the Electron shell did nothing for the account
   (and only cluttered the dock). Codex is now CLI-first via `ai codex <account>`,
   which sets `CODEX_HOME` for real isolation. `AI_GUI_APPS` defaults to `claude`.
+
+### Fixed
+
+- `ai remote doctor`'s Funnel/Serve checks invoked bare `tailscale` instead of
+  the resolved binary path, so they failed on GUI-app installs.
+- On a stock macOS without the Command Line Tools, `ai gui setup` could trigger
+  the `/usr/bin/python3` stub's GUI "install developer tools?" dialog; the stub
+  is now detected and skipped (profile listing degrades to the isolated
+  data-dir default, as documented).
 
 ### Removed
 
