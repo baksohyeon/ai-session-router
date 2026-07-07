@@ -48,6 +48,9 @@ else
   RUN_AI="$AI"
 fi
 
+# Interactive shell snippet under test (sourced by ~/.zshrc in real use).
+GUARD_SNIP="$repo_root/share/shell/guard.zsh"
+
 # ---------- reporting ----------
 pass_count=0
 fail_count=0
@@ -87,6 +90,33 @@ run_check_sh() {
     status=$?
     cat "$tmpout" >>"$allout"
     bad "$label (exit $status)"
+    sed 's/^/       | /' "$tmpout" >&2
+  fi
+}
+
+# expect_out <label> <needle> <shell-string>
+# Asserts exit 0 AND that <needle> appears in captured output (fixed-string match).
+expect_out() {
+  label="$1"; needle="$2"; shift 2
+  if sh -c "$*" >"$tmpout" 2>&1 && grep -qF "$needle" "$tmpout"; then
+    cat "$tmpout" >>"$allout"; ok "$label"
+  else
+    status=$?; cat "$tmpout" >>"$allout"
+    bad "$label (missing '$needle' or exit $status)"
+    sed 's/^/       | /' "$tmpout" >&2
+  fi
+}
+
+# expect_fail <label> <needle> <shell-string>
+# Asserts NON-zero exit AND that <needle> appears (the refuse-path assertion).
+expect_fail() {
+  label="$1"; needle="$2"; shift 2
+  sh -c "$*" >"$tmpout" 2>&1; status=$?
+  cat "$tmpout" >>"$allout"
+  if [ "$status" -ne 0 ] && grep -qF "$needle" "$tmpout"; then
+    ok "$label"
+  else
+    bad "$label (expected non-zero exit with '$needle'; got exit $status)"
     sed 's/^/       | /' "$tmpout" >&2
   fi
 }
@@ -139,6 +169,37 @@ run_check_sh "guard install" "$RUN_AI guard install"
 run_check_sh "guard status" "$RUN_AI guard status"
 run_check_sh "prompt install" "$RUN_AI prompt install"
 run_check_sh "prompt status" "$RUN_AI prompt status"
+
+# ---------- 5c. behavior assertions (content, not just exit code) ----------
+printf 'behavior assertions:\n'
+
+# resolve emits the correct isolation env var per tool.
+expect_out "resolve claude emits CLAUDE_CONFIG_DIR" "CLAUDE_CONFIG_DIR=" \
+  "$RUN_AI resolve claude personal"
+expect_out "resolve codex emits CODEX_HOME" "CODEX_HOME=" \
+  "$RUN_AI resolve codex company"
+
+# status reflects the ambient routing env. Control it explicitly so the result is
+# deterministic regardless of how this smoke run was itself launched.
+expect_out "status reports UNROUTED when env is unset" "UNROUTED" \
+  "env -u CLAUDE_CONFIG_DIR -u CODEX_HOME $RUN_AI status"
+expect_out "status maps a routed dir back to its profile" "routed -> personal" \
+  "env -u CODEX_HOME CLAUDE_CONFIG_DIR=\$HOME/.claude-personal $RUN_AI status"
+
+# guard: the interactive snippet installs wrapper functions and refuses unrouted.
+expect_out "guard installs a claude() function" "claude: function" \
+  "zsh -c 'source \"$GUARD_SNIP\"; whence -w claude'"
+
+# End-to-end refuse: a fake 'claude' on PATH would print LAUNCHED if the guard let
+# it through. A non-zero exit proves the fake never ran (it exits 0).
+expect_fail "guard refuses bare claude, does not launch it" "without routing" \
+  "d=\$(mktemp -d); printf '#!/bin/sh\\necho LAUNCHED\\n' >\"\$d/claude\"; chmod +x \"\$d/claude\"; env -u CLAUDE_CONFIG_DIR PATH=\"\$d:\$PATH\" zsh -c 'source \"$GUARD_SNIP\"; claude --version'; rc=\$?; rm -rf \"\$d\"; exit \$rc"
+
+# gate allows when routed, and via the AI_GUARD_OFF escape hatch.
+expect_out "guard gate allows when routed" "GATE_OK" \
+  "CLAUDE_CONFIG_DIR=\$HOME/.claude-personal zsh -c 'source \"$GUARD_SNIP\"; _ai_guard claude CLAUDE_CONFIG_DIR && echo GATE_OK'"
+expect_out "guard gate allows via AI_GUARD_OFF" "GATE_OK" \
+  "env -u CLAUDE_CONFIG_DIR AI_GUARD_OFF=1 zsh -c 'source \"$GUARD_SNIP\"; _ai_guard claude CLAUDE_CONFIG_DIR && echo GATE_OK'"
 
 # ---------- 6. secret-leak scan over ALL captured output ----------
 # The router promises to print presence/mode only, never token contents. Assert
