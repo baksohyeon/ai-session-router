@@ -1,8 +1,22 @@
 # Guard, observability, and modularization for `ai`
 
 **Date:** 2026-07-07
-**Status:** Phase 1 implemented (guard + `ai status` + prompt segment; print-only installers). Phases 2–3 pending.
-**Branch (suggested):** `feat/guard-observability`
+**Status:** COMPLETE — all three phases landed on `feat/guard-observability`.
+**Branch:** `feat/guard-observability`
+
+## Outcome (all phases)
+
+- **Phase 1** — guard (refuse) + `ai status`/`where` + prompt segment; print-only
+  installers (never edit rc); ASCII-English output.
+- **Phase 2** — `scripts/smoke.sh` grew content assertions (resolve env, status
+  profile mapping, guard refuse/allow/escape); 35 checks passing.
+- **Phase 3** — `bin/ai` split from 1,586 lines to a 133-line entrypoint
+  (config preamble + module loader + usage/main); all functions extracted into
+  ten `lib/*.zsh` modules (maps, platform, checks, resolve, gui, doctor, remote,
+  keychain, profiles, observability). Added a `Makefile` dev-task runner
+  (help/lint/test/check/install/guard/prompt). Verified transparent: `ai doctor`,
+  `ai profiles`, `ai gui --dry-run`, `ai resolve`, `ai status` all behave
+  identically via the `~/.local/bin/ai` symlink from outside the repo.
 
 ## Phase 1 — as-built (2026-07-07)
 
