@@ -66,7 +66,7 @@ codex_store_pref() {
   print -r -- "${v:-auto}"
 }
 
-# File mode ("600", "644"…) without reading contents. $1 = path. Empty if unknown.
+# File mode ("600", "644"...) without reading contents. $1 = path. Empty if unknown.
 file_mode() {
   stat -f '%Lp' "$1" 2>/dev/null || stat -c '%a' "$1" 2>/dev/null || print -r -- ""
 }

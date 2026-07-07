@@ -81,7 +81,7 @@ cmd_keychain() {  # <list|prune> [--force] [--keep DIR ...]
   # prune: dry-run unless --force. Only ORPHAN entries are ever eligible.
   local kept=$(( nactive + nbare ))
   if (( norphan == 0 )); then
-    print -r -- "no orphaned Claude keychain entries found ✓"
+    print -r -- "no orphaned Claude keychain entries found [ok]"
     print -r -- "kept $kept entries ($nactive active + $nbare default)."
     return 0
   fi
@@ -98,7 +98,7 @@ cmd_keychain() {  # <list|prune> [--force] [--keep DIR ...]
   local o
   if (( force )); then
     # Magnitude confirmation (skip with --yes for automation). With no TTY, read -q
-    # returns non-zero → treated as "no" → nothing is deleted. (#security-F2)
+    # returns non-zero -> treated as "no" -> nothing is deleted. (#security-F2)
     if (( ! assume_yes )); then
       print -r -- "about to DELETE $norphan orphaned keychain entry(s); keeping $kept ($nactive active + $nbare default)."
       if ! read -q "?proceed? [y/N] "; then print -r -- ""; print -r -- "aborted, no changes."; return 1; fi

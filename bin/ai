@@ -35,9 +35,9 @@ esac
 : "${AI_PROFILES:=personal company}"
 : "${AI_CLAUDE_ROOT_PREFIX:=$HOME/.claude-}"   # + <account>
 : "${AI_CODEX_ROOT_PREFIX:=$HOME/.codex-}"     # + <account>
-# Generic browser isolation (see docs/superpowers/specs/…-generic-browser-isolation-design.md).
+# Generic browser isolation (see docs/superpowers/specs/...-generic-browser-isolation-design.md).
 # AI_BROWSER: default browser for isolated GUI launches (macOS app name / linux binary).
-#   Empty → auto-detect first available Chromium browser; else OS default browser.
+#   Empty -> auto-detect first available Chromium browser; else OS default browser.
 # AI_BROWSER_DATA_PREFIX: prefix for per-identity isolated user-data dirs; router appends <id>.
 : "${AI_BROWSER:=Microsoft Edge}"
 : "${AI_BROWSER_DATA_PREFIX:=$HOME/.ai-browser-}"

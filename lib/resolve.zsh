@@ -60,12 +60,12 @@ run_tool() {  # <tool> <workspace> [--account X] [-- passthrough...]
   case "$tool" in
     claude)
       export CLAUDE_CONFIG_DIR="$cr"
-      print -r -- "→ claude  CLAUDE_CONFIG_DIR=$cr  cwd=$PWD"
+      print -r -- "-> claude  CLAUDE_CONFIG_DIR=$cr  cwd=$PWD"
       print -r -- "  transcript: $transcript"
       _run_with_transcript "$transcript" claude "${passthru[@]}" ;;
     codex)
       export CODEX_HOME="$cr"
-      print -r -- "→ codex   CODEX_HOME=$cr  cwd=$PWD"
+      print -r -- "-> codex   CODEX_HOME=$cr  cwd=$PWD"
       print -r -- "  transcript: $transcript"
       print -r -- "  note: Codex internal logs may remain under \$CODEX_HOME/log (follows account, not workspace)."
       _run_with_transcript "$transcript" codex "${passthru[@]}" ;;

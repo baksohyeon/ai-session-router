@@ -4,14 +4,14 @@
 
 # ---------- generic browser-identity resolution ----------
 # Resolve the configured browser name for an identity (before existence check):
-#   AI_GUI_BROWSER_<id> → AI_BROWSER → (empty; caller auto-detects).
+#   AI_GUI_BROWSER_<id> -> AI_BROWSER -> (empty; caller auto-detects).
 _gui_resolve_browser_pref() {  # $1 = id -> configured browser (may be empty)
   local id="$1"
   local v="AI_GUI_BROWSER_$id"
   local pref="${(P)v:-}"
   [[ -n "$pref" ]] && { print -r -- "$pref"; return 0; }
   # Legacy fallback: a pre-generic config that only set AI_CHROME_COMPANY_PROFILE
-  # meant "company → Google Chrome, that profile". Preserve the browser too so an
+  # meant "company -> Google Chrome, that profile". Preserve the browser too so an
   # upgrading config does not silently switch company to Edge.
   if [[ "$id" == company ]]; then
     local pv="AI_GUI_PROFILE_company"
@@ -21,7 +21,7 @@ _gui_resolve_browser_pref() {  # $1 = id -> configured browser (may be empty)
   return 0
 }
 
-# Resolve URLs for an identity: AI_GUI_URLS_<id> → legacy company URL fallback.
+# Resolve URLs for an identity: AI_GUI_URLS_<id> -> legacy company URL fallback.
 _gui_resolve_urls() {  # $1 = id -> space-separated URLs (may be empty)
   local id="$1"
   local v="AI_GUI_URLS_$id"
@@ -31,7 +31,7 @@ _gui_resolve_urls() {  # $1 = id -> space-separated URLs (may be empty)
   return 0
 }
 
-# Resolve opt-in profile for an identity: AI_GUI_PROFILE_<id> → legacy company profile.
+# Resolve opt-in profile for an identity: AI_GUI_PROFILE_<id> -> legacy company profile.
 _gui_resolve_profile() {  # $1 = id -> profile name (may be empty)
   local id="$1"
   local v="AI_GUI_PROFILE_$id"
@@ -42,7 +42,7 @@ _gui_resolve_profile() {  # $1 = id -> profile name (may be empty)
 }
 
 # Generic browser identity path (also the native fallback). Resolution order per spec:
-#   browser = AI_GUI_BROWSER_<id> → AI_BROWSER → first detected Chromium → OS default.
+#   browser = AI_GUI_BROWSER_<id> -> AI_BROWSER -> first detected Chromium -> OS default.
 #   Never hard-blocks: an unresolved browser opens URLs in the OS default + a hint.
 _gui_browser() {  # <id> [--dry-run]
   local id="" dry=0
@@ -60,7 +60,7 @@ _gui_browser() {  # <id> [--dry-run]
   profile="$(_gui_resolve_profile "$id")"
   local -a urlv=(); [[ -n "$urls" ]] && urlv=(${=urls})
 
-  # Resolve a launchable target: configured pref → first detected Chromium.
+  # Resolve a launchable target: configured pref -> first detected Chromium.
   target=""; source=""
   if [[ -n "$pref" ]]; then
     if target="$(_browser_launch_target "$pref")"; then source="configured"
@@ -70,7 +70,7 @@ _gui_browser() {  # <id> [--dry-run]
     if target="$(_browser_first_detected)"; then source="auto-detected"; fi
   fi
 
-  # No Chromium browser resolvable → OS default opens URLs (never hard-block).
+  # No Chromium browser resolvable -> OS default opens URLs (never hard-block).
   if [[ -z "$target" ]]; then
     if (( dry )); then
       print -r -- "gui (browser) id=$id"
@@ -95,7 +95,7 @@ _gui_browser() {  # <id> [--dry-run]
       print -r -- "  urls:      ${urls:-(none)}"
       return 0
     fi
-    print -r -- "→ gui $id: $target profile \"$profile\"${urls:+ + urls}"
+    print -r -- "-> gui $id: $target profile \"$profile\"${urls:+ + urls}"
     _launch_browser_profile "$target" "$profile" "${urlv[@]}" \
       || { warn "could not launch $target with profile \"$profile\"."; return 1; }
     return 0
@@ -111,7 +111,7 @@ _gui_browser() {  # <id> [--dry-run]
     print -r -- "  urls:      ${urls:-(none)}"
     return 0
   fi
-  print -r -- "→ gui $id: $target (isolated)  data-dir=$datadir${urls:+ + urls}"
+  print -r -- "-> gui $id: $target (isolated)  data-dir=$datadir${urls:+ + urls}"
   _launch_browser_isolated "$target" "$datadir" "${urlv[@]}" \
     || { warn "could not launch $target isolated."; return 1; }
   return 0
@@ -350,7 +350,7 @@ cmd_gui() {  # <personal|company|setup> [--browser] [--dry-run] [--print]
       continue
     fi
     if _has_app_bundle "$bundle"; then
-      print -r -- "→ gui $id: $app app (isolated)  data-dir=$datadir"
+      print -r -- "-> gui $id: $app app (isolated)  data-dir=$datadir"
       _launch_app_isolated "$bundle" "$datadir"
     else
       warn "$app app not found at $bundle; using browser fallback."
@@ -367,7 +367,7 @@ cmd_shell() {  # personal|company
   local wp; wp="$(ws_path "$ws")"; mkdir -p "$wp"
   check_cwd "$wp"; check_secrets "$wp"
   cd "$wp" || return 1
-  print -r -- "→ shell in $ws workspace: $wp"
+  print -r -- "-> shell in $ws workspace: $wp"
   exec "${SHELL:-/bin/zsh}"
 }
 

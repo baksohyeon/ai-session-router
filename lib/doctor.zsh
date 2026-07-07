@@ -39,11 +39,11 @@ cmd_doctor() {
     croot="$(cfg_root claude "$acct")"
     if [[ -f "$croot/.credentials.json" ]]; then
       # Linux/Windows (or a macOS build that ever writes a file): creds live in-dir.
-      print -r -- "  claude/$acct: file creds in config root (.credentials.json), isolated by CLAUDE_CONFIG_DIR ✓"
+      print -r -- "  claude/$acct: file creds in config root (.credentials.json), isolated by CLAUDE_CONFIG_DIR [ok]"
     elif [[ "$AI_OS" == macos ]]; then
       khash="$(claude_keychain_hash "$croot")"; ksvc="Claude Code-credentials-$khash"
       if [[ -n "$khash" ]] && keychain_service_present "$ksvc"; then
-        print -r -- "  claude/$acct: Keychain entry '$ksvc' present: CLAUDE_CONFIG_DIR isolates auth on this Claude Code version (per-dir keychain hash) ✓"
+        print -r -- "  claude/$acct: Keychain entry '$ksvc' present: CLAUDE_CONFIG_DIR isolates auth on this Claude Code version (per-dir keychain hash) [ok]"
         print -r -- "               (undocumented + version-dependent; confirms an isolated store exists, not which account; use /status. Re-verify after Claude upgrades.)"
       else
         print -r -- "  claude/$acct: no isolated Keychain entry for this root yet. log in: ai claude $acct  (then /login)."
@@ -58,7 +58,7 @@ cmd_doctor() {
     local cver; cver="$(claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
     if [[ -n "$cver" ]]; then
       if [[ "$cver" == "$AI_CLAUDE_KC_VERIFIED_VER" ]]; then
-        print -r -- "  keychain hash scheme: verified for Claude Code $cver ✓"
+        print -r -- "  keychain hash scheme: verified for Claude Code $cver [ok]"
       else
         print -r -- "  note: Claude Code $cver differs from keychain-scheme-verified $AI_CLAUDE_KC_VERIFIED_VER: if any account above shows 'no isolated keychain entry' despite being logged in, the per-dir hash scheme may have changed; re-verify with: ai keychain list"
       fi
@@ -69,7 +69,7 @@ cmd_doctor() {
   for ca in ${=AI_PROFILES}; do
     cxroot="$(cfg_root codex "$ca")"; authf="$cxroot/auth.json"; store="$(codex_store_pref "$cxroot")"
     if [[ -f "$authf" ]]; then
-      print -r -- "  codex/$ca: file-backed creds present (auth.json), isolated by CODEX_HOME ✓"
+      print -r -- "  codex/$ca: file-backed creds present (auth.json), isolated by CODEX_HOME [ok]"
       mode="$(file_mode "$authf")"
       [[ -n "$mode" && "$mode" != 600 && "$mode" != 400 ]] && \
         warn "codex/$ca auth.json mode $mode: treat like a password; run: chmod 600 \"$authf\""
@@ -86,9 +86,9 @@ cmd_doctor() {
     h_p="$(shasum -a 256 "$cx_p" 2>/dev/null | awk '{print $1}')"
     h_c="$(shasum -a 256 "$cx_c" 2>/dev/null | awk '{print $1}')"
     if [[ -n "$h_p" && "$h_p" == "$h_c" ]]; then
-      print -r -- "  codex: personal & company auth.json IDENTICAL ⚠ (cloned; re-login one account separately)"
+      print -r -- "  codex: personal & company auth.json IDENTICAL [!] (cloned; re-login one account separately)"
     else
-      print -r -- "  codex: personal/company auth.json distinct (isolated ✓)"
+      print -r -- "  codex: personal/company auth.json distinct (isolated [ok])"
     fi
   fi
   print -r -- "  note: ChatGPT web account switching (max 2 accounts) does NOT apply to Codex: each Codex account needs its own CODEX_HOME + login, which is exactly what the router pins."
@@ -105,7 +105,7 @@ cmd_doctor() {
       fi
       pcounts="$(_content_counts "$pt" "$proot")"; pok=$?   # plain assignment: $? is _content_counts's rc
       if (( pok == 0 )); then
-        print -r -- "  $pt/$pa: $pcounts ✓"
+        print -r -- "  $pt/$pa: $pcounts [ok]"
       else
         if { [[ "$pt" == claude ]] && _claude_auth_present "$proot"; } || \
            { [[ "$pt" == codex  ]] && _codex_auth_present  "$proot"; }; then
@@ -118,10 +118,10 @@ cmd_doctor() {
     done
   done
   if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
-    print -r -- "  ⚠ CLAUDE_CODE_OAUTH_TOKEN set in env: a token-based Claude launch can delete the shared macOS Keychain entry on exit (issue #37512); unset for subscription-OAuth sessions."
+    print -r -- "  [!] CLAUDE_CODE_OAUTH_TOKEN set in env: a token-based Claude launch can delete the shared macOS Keychain entry on exit (issue #37512); unset for subscription-OAuth sessions."
   fi
   if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-    print -r -- "  ⚠ ANTHROPIC_API_KEY set in env: it OUTRANKS subscription OAuth in Claude Code's auth precedence; a claude launch may silently bill the API key instead of your plan. unset it for subscription sessions."
+    print -r -- "  [!] ANTHROPIC_API_KEY set in env: it OUTRANKS subscription OAuth in Claude Code's auth precedence; a claude launch may silently bill the API key instead of your plan. unset it for subscription sessions."
   fi
   print -r -- "gui desktop apps:"
   local gapp gbundle gd

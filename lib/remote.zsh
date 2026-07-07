@@ -60,7 +60,7 @@ _report_exposed_listeners() {
           any=1
           if _looks_like_control_plane "$proc" "$port"; then
             flagged=1
-            print -r -- "  ⚠️  WARNING  ${proc}  ${addr}:${port}  (looks like an agent control plane)"
+            print -r -- "  [!] WARNING  ${proc}  ${addr}:${port}  (looks like an agent control plane)"
           else
             print -r -- "  info      ${proc}  ${addr}:${port}"
           fi
@@ -89,7 +89,7 @@ _report_exposed_listeners() {
       any=1
       if _looks_like_control_plane "$proc" "$port"; then
         flagged=1
-        print -r -- "  ⚠️  WARNING  ${proc}  ${addr}:${port}  (looks like an agent control plane)"
+        print -r -- "  [!] WARNING  ${proc}  ${addr}:${port}  (looks like an agent control plane)"
       else
         print -r -- "  info      ${proc}  ${addr}:${port}"
       fi
@@ -97,9 +97,9 @@ _report_exposed_listeners() {
   else
     print -r -- "  (listener enumeration not supported on this OS)"; return 0
   fi
-  (( any )) || print -r -- "  none (no off-loopback TCP listeners detected) ✓"
+  (( any )) || print -r -- "  none (no off-loopback TCP listeners detected) [ok]"
   if (( flagged )); then
-    print -r -- "  → An agent control plane reachable off-loopback is high-risk. Bind it to"
+    print -r -- "  -> An agent control plane reachable off-loopback is high-risk. Bind it to"
     print -r -- "    127.0.0.1 and reach it over Tailscale/SSH, or require authentication."
   fi
   return 0
@@ -114,9 +114,9 @@ _report_tailscale_exposure() {  # $1 = tailscale path (may be empty)
   else
     local funnel; funnel="$(tailscale funnel status 2>/dev/null)"
     if [[ -z "$funnel" || "$funnel" == *"No serve config"* || "$funnel" == *"Funnel is not"* ]]; then
-      print -r -- "  Funnel not active ✓"
+      print -r -- "  Funnel not active [ok]"
     else
-      print -r -- "  ⚠️  HIGH RISK: Tailscale Funnel is ACTIVE: whatever is behind it is on the"
+      print -r -- "  [!] HIGH RISK: Tailscale Funnel is ACTIVE: whatever is behind it is on the"
       print -r -- "     PUBLIC INTERNET. Never expose an unauthenticated agent control plane"
       print -r -- "     (Codex app-server, MCP server, local web UI) through Funnel."
       print -r -- "$funnel" | sed 's/^/     /'
@@ -154,9 +154,9 @@ cmd_remote_doctor() {
   _report_exposed_listeners
   _report_tailscale_exposure "$tp"
   print -r -- "-- control-plane exposure notes --"
-  print -r -- "  • Codex 'app-server' WebSocket mode is EXPERIMENTAL; do not expose it"
+  print -r -- "  - Codex 'app-server' WebSocket mode is EXPERIMENTAL; do not expose it"
   print -r -- "    unauthenticated. Keep it on loopback and reach it via Tailscale/SSH."
-  print -r -- "  • Claude Code Remote Control uses OUTBOUND HTTPS with no inbound port and"
+  print -r -- "  - Claude Code Remote Control uses OUTBOUND HTTPS with no inbound port and"
   print -r -- "    Claude.ai login only. Nothing to expose here, but anyone with that login"
   print -r -- "    can drive the session."
 }

@@ -3,7 +3,7 @@
 # See docs/superpowers/specs/2026-07-07-guard-observability-modularization-design.md
 
 # ---------- warnings (non-blocking) ----------
-warn() { print -r -- "⚠️  $*" >&2; }
+warn() { print -r -- "[!] $*" >&2; }
 
 # Valid iff the name appears in the configured AI_PROFILES set.
 valid_ws() {
