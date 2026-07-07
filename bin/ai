@@ -58,9 +58,14 @@ esac
 # Last Claude Code version where the per-dir keychain scheme sha256(abs dir)[:8]
 # was confirmed. doctor soft-warns when the installed version drifts from this.
 : "${AI_CLAUDE_KC_VERIFIED_VER:=2.1.198}"
+# Repo root, resolved at top level. MUST be computed here, not inside a function:
+# with zsh FUNCTION_ARGZERO (default on) $0 is the function name inside a function,
+# so ${0:A:h:h} only resolves to the script's repo from top-level scope.
+: "${AI_ROOT:=${0:A:h:h}}"
+
 # Zellij layout (layout-as-code) used by `ai zellij`. Defaults to the router's shipped
 # layout, resolved relative to this script; override with your own copy in router.env.
-: "${AI_ZELLIJ_LAYOUT:=${0:A:h:h}/share/zellij/ai.kdl}"
+: "${AI_ZELLIJ_LAYOUT:=$AI_ROOT/share/zellij/ai.kdl}"
 
 _cfg="${XDG_CONFIG_HOME:-$HOME/.config}/ai-session-router/router.env"
 [[ -f "$_cfg" ]] && source "$_cfg"
@@ -1429,6 +1434,106 @@ cmd_profiles() {  # list | show <account> (account-centric inventory). Never pri
   esac
 }
 
+# Reverse-map an active config dir back to a profile name. Prints name, rc 0 on
+# match; rc 1 if the dir is empty or matches no configured profile.
+_profile_from_root() {  # $1 = tool, $2 = dir
+  local tool="$1" dir="$2" p
+  [[ -n "$dir" ]] || return 1
+  for p in ${=AI_PROFILES}; do
+    [[ "$(cfg_root "$tool" "$p")" == "$dir" ]] && { print -r -- "$p"; return 0; }
+  done
+  return 1
+}
+
+cmd_status() {  # status | where: routing state of THIS shell (env vars only)
+  local ccd="${CLAUDE_CONFIG_DIR:-}" cxh="${CODEX_HOME:-}" cp cx
+  cp="$(_profile_from_root claude "$ccd")" || cp=""
+  cx="$(_profile_from_root codex "$cxh")" || cx=""
+
+  print -r -- "== ai status =="
+  if [[ -n "$ccd" ]]; then
+    print -r -- "claude:  routed -> ${cp:-<unknown>}   CLAUDE_CONFIG_DIR=$ccd"
+  else
+    print -r -- "claude:  UNROUTED   bare 'claude' would use ~/.claude (default)"
+  fi
+  if [[ -n "$cxh" ]]; then
+    print -r -- "codex:   routed -> ${cx:-<unknown>}   CODEX_HOME=$cxh"
+  else
+    print -r -- "codex:   UNROUTED   bare 'codex' would use ~/.codex (default)"
+  fi
+
+  print -r -- "cwd:     $PWD"
+  local prof="${cp:-$cx}" wp=""
+  if [[ -n "$prof" ]]; then
+    wp="$(ws_path "$prof" 2>/dev/null)"
+    if [[ -n "$wp" ]]; then
+      case "$PWD/" in
+        "$wp/"*) print -r -- "ws:      $wp   (cwd is inside the $prof workspace)" ;;
+        *)       print -r -- "ws:      $wp   WARNING: cwd is OUTSIDE the $prof workspace" ;;
+      esac
+    fi
+  fi
+
+  local rc found="no"
+  for rc in "$HOME/.zshrc" "$HOME/.zprofile"; do
+    [[ -f "$rc" ]] && grep -q 'share/shell/guard.zsh' "$rc" 2>/dev/null && found="yes"
+  done
+  print -r -- "guard:   referenced in shell rc: $found"
+  print -r -- "note: 'routed' reflects env vars only; confirm the live Claude account with /status in-session."
+}
+
+# Print-only installers: they NEVER edit your shell rc. They print the exact
+# `source` line for you to paste into ~/.zshrc yourself (manual, auditable).
+cmd_guard() {  # install | status
+  local sub="${1:-install}"; (( $# )) && shift
+  local snippet="$AI_ROOT/share/shell/guard.zsh"
+  case "$sub" in
+    install|show|line)
+      [[ -f "$snippet" ]] || { print -ru2 -- "ai guard: snippet not found: $snippet"; return 1; }
+      print -r -- "# ai-guard (refuse mode): add the line below to ~/.zshrc, then restart your shell."
+      print -r -- "# It refuses bare 'claude'/'codex' when the session is not routed by 'ai'."
+      print -r -- "# Deliberate bare run:  AI_GUARD_OFF=1 claude ..."
+      print -r --
+      print -r -- "source \"$snippet\""
+      ;;
+    status)
+      [[ -f "$snippet" ]] && print -r -- "ai guard: snippet: $snippet (present)" \
+                          || print -r -- "ai guard: snippet: $snippet (MISSING)"
+      local rc found="no"
+      for rc in "$HOME/.zshrc" "$HOME/.zprofile"; do
+        [[ -f "$rc" ]] && grep -q 'share/shell/guard.zsh' "$rc" 2>/dev/null && found="yes ($rc)"
+      done
+      print -r -- "ai guard: referenced in shell rc: $found"
+      ;;
+    *) print -ru2 -- "usage: ai guard <install|status>"; return 2 ;;
+  esac
+}
+
+cmd_prompt() {  # install | status
+  local sub="${1:-install}"; (( $# )) && shift
+  local snippet="$AI_ROOT/share/shell/prompt.zsh"
+  case "$sub" in
+    install|show|line)
+      [[ -f "$snippet" ]] || { print -ru2 -- "ai prompt: snippet not found: $snippet"; return 1; }
+      print -r -- "# ai-prompt: add the line below to ~/.zshrc, then restart your shell."
+      print -r -- "# It shows the active routed profile in the right prompt, e.g. [claude:personal]."
+      print -r -- "# Source it AFTER any prompt theme (Powerlevel10k / Starship), which may override RPROMPT."
+      print -r --
+      print -r -- "source \"$snippet\""
+      ;;
+    status)
+      [[ -f "$snippet" ]] && print -r -- "ai prompt: snippet: $snippet (present)" \
+                          || print -r -- "ai prompt: snippet: $snippet (MISSING)"
+      local rc found="no"
+      for rc in "$HOME/.zshrc" "$HOME/.zprofile"; do
+        [[ -f "$rc" ]] && grep -q 'share/shell/prompt.zsh' "$rc" 2>/dev/null && found="yes ($rc)"
+      done
+      print -r -- "ai prompt: referenced in shell rc: $found"
+      ;;
+    *) print -ru2 -- "usage: ai prompt <install|status>"; return 2 ;;
+  esac
+}
+
 usage() {
   cat <<'EOF'
 ai: AI session router
@@ -1442,6 +1547,9 @@ ai: AI session router
   ai zellij  <personal|company>                                 (modern; layout-as-code)
   ai keychain <list|prune> [--force] [--yes] [--keep DIR ...]   (prune is dry-run unless --force; --force prompts unless --yes)
   ai doctor
+  ai status                                                     (alias: ai where) routing state of this shell
+  ai guard   <install|status>                                   (print-only: prints the ~/.zshrc line to paste)
+  ai prompt  <install|status>                                   (print-only: right-prompt profile segment)
   ai remote doctor
   ai logs
   ai profiles [list | show <personal|company>]
@@ -1463,6 +1571,9 @@ main() {
     zellij)  cmd_zellij "$@" ;;
     keychain) cmd_keychain "$@" ;;
     doctor)  cmd_doctor ;;
+    status|where) cmd_status ;;
+    guard)   cmd_guard "$@" ;;
+    prompt)  cmd_prompt "$@" ;;
     remote)  [[ "${1:-}" == doctor ]] && cmd_remote_doctor || { print -r -- "usage: ai remote doctor" >&2; return 2; } ;;
     logs)    cmd_logs ;;
     profiles) cmd_profiles "$@" ;;

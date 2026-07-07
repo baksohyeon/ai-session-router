@@ -129,6 +129,17 @@ run_check_sh "gui setup --print" "$RUN_AI gui setup --print"
 printf 'keychain (list only; never prune):\n'
 run_check_sh "keychain list" "$RUN_AI keychain list"
 
+# ---------- 5b. status / guard / prompt (read-only; print-only installers) ----------
+# `guard install` / `prompt install` only PRINT the source line to paste; they
+# never edit any shell rc. `status`/`where` read env + rc presence, no launches.
+printf 'status / guard / prompt (read-only):\n'
+run_check_sh "status" "$RUN_AI status"
+run_check_sh "where (alias)" "$RUN_AI where"
+run_check_sh "guard install" "$RUN_AI guard install"
+run_check_sh "guard status" "$RUN_AI guard status"
+run_check_sh "prompt install" "$RUN_AI prompt install"
+run_check_sh "prompt status" "$RUN_AI prompt status"
+
 # ---------- 6. secret-leak scan over ALL captured output ----------
 # The router promises to print presence/mode only, never token contents. Assert
 # that nothing token-shaped leaked into any command's output. Patterns cover the
