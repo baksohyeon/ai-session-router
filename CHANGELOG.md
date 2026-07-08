@@ -5,6 +5,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Deprecated
+
+- **This project is archived.** Session routing is superseded by Orca. Added
+  [docs/*/TEARDOWN.md](docs/en/TEARDOWN.md) documenting how to remove the router from a
+  machine and return it to vanilla (plumbing, account isolation dirs, Keychain entries,
+  and preserving conversation history to the vanilla `~/.claude` / `~/.codex` paths), and
+  [docs/*/ELI5.md](docs/en/ELI5.md) with a plain-language summary. Every doc carries an
+  archived banner; the README is marked deprecated;
+  [docs/*/REMOTE-ACCESS.md](docs/en/REMOTE-ACCESS.md) stays useful standalone and is now
+  the primary doc.
+
 ## [0.2.0] - 2026-07-04
 
 ### Added

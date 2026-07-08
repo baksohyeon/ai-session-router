@@ -2,6 +2,8 @@
 
 **Language:** [English](../en/HOW-IT-WORKS.md) · 한국어
 
+> **[보관됨]** 이 프로젝트는 deprecated이며 세션 라우팅은 Orca로 옮겨갔습니다. 되돌리기: [TEARDOWN.md](TEARDOWN.md). 참고용으로 남겨둡니다.
+
 `ai`가 속으로 실제 뭘 하는지 쉬운 말로 풀었다. [ARCHITECTURE.md](../en/ARCHITECTURE.md)가
 너무 추상적이었다면 여기부터 보면 된다.
 

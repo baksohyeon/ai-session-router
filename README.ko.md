@@ -5,6 +5,12 @@
 
 **Language:** [English](README.md) · 한국어  |  **릴리스:** [최신](https://github.com/baksohyeon/ai-session-router/releases/latest) · [전체](https://github.com/baksohyeon/ai-session-router/releases)
 
+> **[보관됨 · deprecated]** 이 저장소는 더 유지보수하지 않습니다. 세션 라우팅은 이제 Orca가 맡습니다. 아래 내용은 참고용으로 남겨둡니다.
+>
+> - 처음 보는 분: [아주 쉽게 (ELI5)](docs/ko/ELI5.md)
+> - 머신을 설치 전으로 되돌리기: [바닐라로 되돌리기](docs/ko/TEARDOWN.md)
+> - 계속 쓸 만한 문서: [원격 접속 완전 가이드](docs/ko/REMOTE-ACCESS.md) — 라우터와 무관하게 단독으로 읽어도 됩니다.
+
 명령 한 줄로 **Claude Code** 또는 **Codex**를 맞는 **계정**, 맞는 **워크스페이스**, 맞는
 **브라우저 신원**으로 실행합니다. 개인용과 업무용 AI 사용이 서로 섞이지 않게요.
 

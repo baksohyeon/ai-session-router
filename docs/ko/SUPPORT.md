@@ -2,6 +2,8 @@
 
 **Language:** [English](../en/SUPPORT.md) · 한국어
 
+> **[보관됨]** 이 프로젝트는 deprecated이며 세션 라우팅은 Orca로 옮겨갔습니다. 되돌리기: [TEARDOWN.md](TEARDOWN.md). 참고용으로 남겨둡니다.
+
 라우터가 무엇을, 어느 표면에서, 어느 OS에서 격리하는지 정리한 페이지다. "내 조합이 되나?"를
 여기서 확인하면 된다. 명령어 문법은 [COMMANDS.md](COMMANDS.md), 설치와 첫 실행은
 [퀵스타트](../../README.md#quick-start)를 봐라.

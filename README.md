@@ -5,6 +5,12 @@
 
 **Language:** English · [한국어](README.ko.md)  |  **Releases:** [latest](https://github.com/baksohyeon/ai-session-router/releases/latest) · [all](https://github.com/baksohyeon/ai-session-router/releases)
 
+> **[Archived · deprecated]** This repo is no longer maintained. Session routing is now handled by Orca. The content below is kept for reference.
+>
+> - New here: [Explain like I'm 5](docs/en/ELI5.md)
+> - Revert your machine to pre-install state: [Reverting to vanilla](docs/en/TEARDOWN.md)
+> - The doc worth keeping: [Remote Access — full guide](docs/en/REMOTE-ACCESS.md) — reads standalone, independent of the router.
+
 One command to launch **Claude Code** or **Codex** with the right **account**, in the
 right **workspace**, with the right **browser identity**, so your personal and work AI
 usage never bleed into each other.

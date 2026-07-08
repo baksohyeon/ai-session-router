@@ -2,6 +2,8 @@
 
 **Language:** English · [한국어](../ko/THREAT-MODEL.md)
 
+> **[Archived]** This project is deprecated; session routing moved to Orca. See [TEARDOWN.md](TEARDOWN.md) to revert. Kept for reference.
+
 What the router protects, what it does not, and the risks that remain. The router's job is to
 keep the active account, tool, state root, and network exposure visible and separate. It does
 not add security the vendors do not provide. Read this before trusting it with a work account.

@@ -2,6 +2,8 @@
 
 **Language:** English · [한국어](../ko/ARCHITECTURE.md)
 
+> **[Archived]** This project is deprecated; session routing moved to Orca. See [TEARDOWN.md](TEARDOWN.md) to revert. Kept for reference.
+
 ## 1. Problem
 
 One machine, one user, two AI identities (personal accounts/projects vs work

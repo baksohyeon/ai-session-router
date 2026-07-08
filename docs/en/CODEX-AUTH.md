@@ -2,6 +2,8 @@
 
 **Language:** English · [한국어](../ko/CODEX-AUTH.md)
 
+> **[Archived]** This project is deprecated; session routing moved to Orca. See [TEARDOWN.md](TEARDOWN.md) to revert. Kept for reference.
+
 How the router keeps two OpenAI Codex identities (`personal`, `company`) separate, how
 to log into each, and what OpenAI's account model does (and does **not**) do for you.
 

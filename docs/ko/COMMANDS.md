@@ -2,6 +2,8 @@
 
 **Language:** [English](../en/COMMANDS.md) · 한국어
 
+> **[보관됨]** 이 프로젝트는 deprecated이며 세션 라우팅은 Orca로 옮겨갔습니다. 되돌리기: [TEARDOWN.md](TEARDOWN.md). 참고용으로 남겨둡니다.
+
 ```
 ai gui     <personal|company> [--browser] [--dry-run]      # 네이티브 Claude 앱, 없으면 격리된 브라우저 인스턴스
 ai gui     setup [--print]                                 # 브라우저 감지, 신원 → router.env 매핑

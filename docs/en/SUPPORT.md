@@ -2,6 +2,8 @@
 
 **Language:** English · [한국어](../ko/SUPPORT.md)
 
+> **[Archived]** This project is deprecated; session routing moved to Orca. See [TEARDOWN.md](TEARDOWN.md) to revert. Kept for reference.
+
 What the router isolates, on which surface, and on which OS. This is the "does my
 combination work?" page. For the command syntax see [COMMANDS.md](COMMANDS.md); for
 install and first run see the [Quick start](../../README.md#quick-start).
