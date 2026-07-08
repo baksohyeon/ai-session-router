@@ -2,6 +2,8 @@
 
 **Language:** [English](../en/WSL-LINUX.md) · 한국어
 
+> **[보관됨]** 이 프로젝트는 deprecated이며 세션 라우팅은 Orca로 옮겨갔습니다. 되돌리기: [TEARDOWN.md](TEARDOWN.md). 참고용으로 남겨둡니다.
+
 Linux에서, 그리고 WSL을 통해 Windows에서 라우터를 실행하는 방법이다. 정확한 설정 절차,
 읽기 전용 스모크 배터리 실행 방법, 그리고 무엇이 실제로 검증됐고 무엇이 코드 정적 검토에만
 그쳤는지를 솔직하게 정리한다. 도구별 표면별 OS 지원표는 [SUPPORT.md](SUPPORT.md)를,

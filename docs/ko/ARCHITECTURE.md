@@ -2,6 +2,8 @@
 
 **Language:** [English](../en/ARCHITECTURE.md) · 한국어
 
+> **[보관됨]** 이 프로젝트는 deprecated이며 세션 라우팅은 Orca로 옮겨갔습니다. 되돌리기: [TEARDOWN.md](TEARDOWN.md). 참고용으로 남겨둡니다.
+
 ## 1. 문제
 
 한 대의 머신, 한 명의 사용자, 두 개의 AI 신원(개인 계정/프로젝트 vs 업무

@@ -2,6 +2,8 @@
 
 **Language:** English · [한국어](../ko/COMMANDS.md)
 
+> **[Archived]** This project is deprecated; session routing moved to Orca. See [TEARDOWN.md](TEARDOWN.md) to revert. Kept for reference.
+
 ```
 ai gui     <personal|company> [--browser] [--dry-run]      # native Claude app, else isolated browser instance
 ai gui     setup [--print]                                 # detect browsers, map identities → router.env

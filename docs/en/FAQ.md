@@ -2,6 +2,8 @@
 
 **Language:** English · [한국어](../ko/FAQ.md)
 
+> **[Archived]** This project is deprecated; session routing moved to Orca. See [TEARDOWN.md](TEARDOWN.md) to revert. Kept for reference.
+
 Honest answers, including the uncomfortable ones. Companion to
 [REMOTE-ACCESS.md](./REMOTE-ACCESS.md) (how to connect) and
 [ARCHITECTURE.md](./ARCHITECTURE.md) (how identity routing works).

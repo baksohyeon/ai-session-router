@@ -2,6 +2,8 @@
 
 **Language:** English · [한국어](../ko/SURFACES.md)
 
+> **[Archived]** This project is deprecated; session routing moved to Orca. See [TEARDOWN.md](TEARDOWN.md) to revert. Kept for reference.
+
 Each product has several surfaces: terminal, desktop app, browser, mobile, remote control.
 The router isolates local surfaces by pointing them at a per-account state root. It cannot
 isolate server-side surfaces (web and mobile account state); for those the separation lives

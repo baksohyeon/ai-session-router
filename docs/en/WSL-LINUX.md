@@ -2,6 +2,8 @@
 
 **Language:** English · [한국어](../ko/WSL-LINUX.md)
 
+> **[Archived]** This project is deprecated; session routing moved to Orca. See [TEARDOWN.md](TEARDOWN.md) to revert. Kept for reference.
+
 How to run the router on Linux, and on Windows through WSL. This page covers exact
 setup, how to run the read-only smoke battery, and an honest statement of what is
 verified versus only statically reviewed. For the OS support matrix by tool and

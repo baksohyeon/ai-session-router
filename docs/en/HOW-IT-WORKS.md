@@ -2,6 +2,8 @@
 
 **Language:** English · [한국어](../ko/HOW-IT-WORKS.md)
 
+> **[Archived]** This project is deprecated; session routing moved to Orca. See [TEARDOWN.md](TEARDOWN.md) to revert. Kept for reference.
+
 A plain-English explanation of what `ai` does under the hood. If
 [ARCHITECTURE.md](ARCHITECTURE.md) felt too abstract, start here.
 

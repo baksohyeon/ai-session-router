@@ -2,6 +2,8 @@
 
 **Language:** English · [한국어](../ko/PORTABILITY.md)
 
+> **[Archived]** This project is deprecated; session routing moved to Orca. See [TEARDOWN.md](TEARDOWN.md) to revert. Kept for reference.
+
 The router runs regardless of environment. The **core** (env-var
 redirection, workspace selection, logging, doctor/resolve) is OS-agnostic. A few
 surfaces are platform-specific; helper functions isolate those, so adding an OS is a

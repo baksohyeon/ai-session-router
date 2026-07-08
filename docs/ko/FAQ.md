@@ -2,6 +2,8 @@
 
 **Language:** [English](../en/FAQ.md) · 한국어
 
+> **[보관됨]** 이 프로젝트는 deprecated이며 세션 라우팅은 Orca로 옮겨갔습니다. 되돌리기: [TEARDOWN.md](TEARDOWN.md). 참고용으로 남겨둡니다.
+
 불편한 답까지 포함해서, 솔직하게 답합니다.
 [REMOTE-ACCESS.md](./REMOTE-ACCESS.md)(어떻게 연결하는가)와
 [ARCHITECTURE.md](./ARCHITECTURE.md)(신원 라우팅이 어떻게 작동하는가)의

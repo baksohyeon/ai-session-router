@@ -2,6 +2,8 @@
 
 **Language:** [English](../en/CODEX-AUTH.md) · 한국어
 
+> **[보관됨]** 이 프로젝트는 deprecated이며 세션 라우팅은 Orca로 옮겨갔습니다. 되돌리기: [TEARDOWN.md](TEARDOWN.md). 참고용으로 남겨둡니다.
+
 라우터가 두 개의 OpenAI Codex 신원(`personal`, `company`)을 어떻게 분리하는지, 각각에
 어떻게 로그인하는지, 그리고 OpenAI의 계정 모델이 무엇을 해주고 무엇을 **해주지 않는지**
 정리한다.

@@ -2,6 +2,8 @@
 
 **Language:** [English](../en/ORCHESTRATION-PLAN.md) · 한국어
 
+> **[보관됨]** 이 프로젝트는 deprecated이며 세션 라우팅은 Orca로 옮겨갔습니다. 되돌리기: [TEARDOWN.md](TEARDOWN.md). 참고용으로 남겨둡니다.
+
 > 상태: **리뷰용 초안** (2026-07-02, `main`에 커밋됨). [ARCHITECTURE.md](ARCHITECTURE.md)의 연장선이다.
 > 조사 근거: 1차 자료(Claude Code / Codex CLI 문서, GitHub)를 2026년 중반에 살펴본 내용.
 > 정확한 플래그와 모델 ID는 *호출 시점에 다시 확인*할 것. 두 CLI 모두 자동 업데이트된다.

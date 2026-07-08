@@ -2,6 +2,8 @@
 
 **Language:** English · [한국어](../ko/ORCHESTRATION-PLAN.md)
 
+> **[Archived]** This project is deprecated; session routing moved to Orca. See [TEARDOWN.md](TEARDOWN.md) to revert. Kept for reference.
+
 > Status: **draft for review** (2026-07-02, committed on `main`). Extends [ARCHITECTURE.md](ARCHITECTURE.md).
 > Research basis: primary sources (Claude Code / Codex CLI docs, GitHub) surveyed mid-2026.
 > Treat exact flags/model IDs as *verify-at-invocation*; both CLIs auto-update.
