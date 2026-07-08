@@ -16,3 +16,6 @@ router.env
 # OS cruft
 .DS_Store
 Thumbs.db
+
+# code-review-graph local cache (config ships as .mcp.json)
+.code-review-graph/
